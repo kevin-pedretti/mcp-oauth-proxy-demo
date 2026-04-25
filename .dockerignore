@@ -1,0 +1,8 @@
+.venv
+.env
+uv.lock
+*.pyc
+__pycache__
+client.py
+generate_token.py
+decode_token.py

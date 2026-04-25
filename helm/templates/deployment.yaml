@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mcp-oauth2-demo.fullname" . }}
+  labels:
+    {{- include "mcp-oauth2-demo.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "mcp-oauth2-demo.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "mcp-oauth2-demo.selectorLabels" . | nindent 8 }}
+    spec:
+      # OpenShift assigns a random UID at runtime; runAsNonRoot ensures it is
+      # never root regardless of which UID is chosen.
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: server
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          env:
+            - name: HOST
+              value: "0.0.0.0"
+            - name: JWT_ISSUER
+              value: {{ .Values.auth.jwtIssuer | quote }}
+            - name: JWT_AUDIENCE
+              value: {{ .Values.auth.jwtAudience | quote }}
+            {{- if .Values.auth.jwksUri }}
+            - name: JWKS_URI
+              value: {{ .Values.auth.jwksUri | quote }}
+            {{- else }}
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "mcp-oauth2-demo.secretName" . }}
+                  key: {{ .Values.auth.existingSecretKey }}
+            {{- end }}
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 15
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

@@ -1,0 +1,44 @@
+replicaCount: 1
+
+image:
+  repository: mcp-oauth2-demo
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+service:
+  type: ClusterIP
+  port: 8000
+
+auth:
+  # HMAC shared secret — used when jwksUri is not set.
+  # In production set this to a strong random value or use existingSecret.
+  jwtSecret: "dev-secret-change-in-prod-minimum-32b"
+
+  # Reference an existing Secret instead of creating one from jwtSecret above.
+  # The named secret must contain the key specified by existingSecretKey.
+  existingSecret: ""
+  existingSecretKey: "jwt-secret"
+
+  # OIDC provider JWKS endpoint. When set, jwtSecret is ignored and tokens
+  # are verified against the provider's public keys.
+  jwksUri: ""
+
+  jwtIssuer: "http://localhost:8000"
+  jwtAudience: "mcp-server"
+
+# OpenShift Route for external access.
+route:
+  enabled: true
+  # Hostname assigned by OpenShift when left empty.
+  host: ""
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
