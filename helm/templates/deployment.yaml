@@ -36,19 +36,26 @@ spec:
           env:
             - name: HOST
               value: "0.0.0.0"
-            - name: JWT_ISSUER
-              value: {{ .Values.auth.jwtIssuer | quote }}
-            - name: JWT_AUDIENCE
-              value: {{ .Values.auth.jwtAudience | quote }}
-            {{- if .Values.auth.jwksUri }}
-            - name: JWKS_URI
-              value: {{ .Values.auth.jwksUri | quote }}
-            {{- else }}
-            - name: JWT_SECRET
+            - name: OIDC_CONFIG_URL
+              value: {{ .Values.auth.oidcConfigUrl | quote }}
+            - name: OIDC_CLIENT_ID
+              value: {{ .Values.auth.oidcClientId | quote }}
+            - name: OIDC_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: {{ include "mcp-oauth2-demo.secretName" . }}
                   key: {{ .Values.auth.existingSecretKey }}
+            {{- if .Values.auth.oidcAudience }}
+            - name: OIDC_AUDIENCE
+              value: {{ .Values.auth.oidcAudience | quote }}
+            {{- end }}
+            {{- if .Values.auth.verifyIdToken }}
+            - name: OIDC_VERIFY_ID_TOKEN
+              value: "true"
+            {{- end }}
+            {{- if .Values.auth.baseUrl }}
+            - name: BASE_URL
+              value: {{ .Values.auth.baseUrl | quote }}
             {{- end }}
           livenessProbe:
             tcpSocket:

@@ -21,7 +21,7 @@ app.kubernetes.io/name: {{ include "mcp-oauth2-demo.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
-{{/* Name of the Secret containing JWT_SECRET */}}
+{{/* Name of the Secret containing OIDC_CLIENT_SECRET */}}
 {{- define "mcp-oauth2-demo.secretName" -}}
 {{- if .Values.auth.existingSecret }}
 {{- .Values.auth.existingSecret }}

@@ -10,21 +10,33 @@ service:
   port: 8000
 
 auth:
-  # HMAC shared secret — used when jwksUri is not set.
-  # In production set this to a strong random value or use existingSecret.
-  jwtSecret: "dev-secret-change-in-prod-minimum-32b"
+  # OIDC provider's OpenID configuration URL (required).
+  # e.g. https://YOUR_TENANT.auth0.com/.well-known/openid-configuration
+  oidcConfigUrl: ""
 
-  # Reference an existing Secret instead of creating one from jwtSecret above.
+  # OAuth application client ID (required).
+  oidcClientId: ""
+
+  # OAuth application client secret (required).
+  # Stored in a Kubernetes Secret. Use existingSecret to reference a pre-existing one.
+  oidcClientSecret: ""
+
+  # Reference an existing Secret instead of creating one from oidcClientSecret above.
   # The named secret must contain the key specified by existingSecretKey.
   existingSecret: ""
-  existingSecretKey: "jwt-secret"
+  existingSecretKey: "oidc-client-secret"
 
-  # OIDC provider JWKS endpoint. When set, jwtSecret is ignored and tokens
-  # are verified against the provider's public keys.
-  jwksUri: ""
+  # API audience identifier — required by some providers (e.g. Auth0); omit for others.
+  oidcAudience: ""
 
-  jwtIssuer: "http://localhost:8000"
-  jwtAudience: "mcp-server"
+  # Set to true when the provider issues opaque (non-JWT) access tokens (e.g. GitLab).
+  # The server will verify the id_token JWT instead.
+  verifyIdToken: false
+
+  # Public URL of this server, used to construct OAuth redirect URIs.
+  # For an OpenShift Route with TLS, this should be https://<route-hostname>.
+  # Must match the callback URL registered with your OIDC provider.
+  baseUrl: ""
 
 # OpenShift Route for external access.
 route:
