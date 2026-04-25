@@ -44,19 +44,29 @@ uv run main.py --dev
 uv run client.py
 ```
 
-On first run the client opens your browser, completes a local OAuth flow (no login required — the in-memory provider auto-approves), then calls both tools.
+On first run the client opens your browser, completes a local OAuth flow (no login required — the in-memory provider auto-approves), then calls all tools.
 
 Tokens are stored encrypted on disk at `~/.fastmcp/oauth-tokens/` so subsequent runs skip the browser flow. Set `OAUTH_STORAGE_ENCRYPTION_KEY` in your `.env` to persist tokens across restarts (see [Environment variables](#environment-variables)).
 
 ```
 [client] Connected to http://localhost:8000/mcp
-[client] Available tools: ['hello', 'whoami']
+[client] Available tools: ['hello', 'whoami', 'set_user_value', 'get_user_value', 'set_session_value', 'get_session_value']
 
 [client] hello -> Hello, OAuth2 World! (authenticated as: unknown)
 [client] whoami -> {"client_id": "...", "scopes": ["openid", "profile"], ...}
+
+[client] --- Per-user state (persists across runs) ---
+[client] set_user_value  -> stored user['favorite_color'] = 'blue'
+[client] get_user_value  -> blue
+[client] get_user_value (missing) -> None
+
+[client] --- Per-session state (lost when this script exits) ---
+[client] set_session_value -> stored session['request_count'] = '42' (session abcd1234…)
+[client] get_session_value -> 42
+[client] get_session_value (missing) -> None
 ```
 
-> **Note:** With `--dev`, `subject` and `issuer` are `null` in `whoami` — the in-memory provider issues opaque tokens, not JWTs, so there are no identity claims.
+> **Note:** With `--dev`, `subject` and `issuer` are `null` in `whoami` — the in-memory provider issues opaque tokens, not JWTs, so there are no identity claims. The user state tools store keys under `"unknown"` as the subject in this mode.
 
 ## Connecting to a real OIDC provider
 
@@ -184,6 +194,33 @@ The script uses the Authorization Code flow with PKCE (S256). No `GITLAB_CLIENT_
 |------|---------------|-------------|
 | `hello(name)` | `openid` | Returns a greeting including the authenticated subject |
 | `whoami()` | `profile` | Returns identity info from the session token |
+| `set_user_value(key, value)` | `openid` | Store a key/value pair for the current user (see [Per-user state](#per-user-state)) |
+| `get_user_value(key)` | `openid` | Retrieve a stored value for the current user |
+| `set_session_value(key, value)` | `openid` | Store a key/value pair for the current session (see [Per-session state](#per-session-state)) |
+| `get_session_value(key)` | `openid` | Retrieve a stored value for the current session |
+
+## State management
+
+This server demonstrates two patterns for maintaining state across tool calls.
+
+### Per-user state
+
+`set_user_value` / `get_user_value` store data in a local SQLite database (`server_state.db`) keyed by the `sub` claim from the authenticated JWT. This means:
+
+- **Persistent** — values survive server restarts.
+- **Identity-scoped** — the same user reconnecting from a different client or in a new session sees the same values.
+- **Isolated** — different users never see each other's values.
+
+The database path can be overridden with the `STATE_DB_PATH` environment variable.
+
+### Per-session state
+
+`set_session_value` / `get_session_value` store data in memory keyed by the MCP session ID (the `mcp-session-id` HTTP header). All tool calls within a single `async with Client(...) as client:` block share the same session ID and therefore share this state. This means:
+
+- **Ephemeral** — values are lost when the client disconnects or the server restarts.
+- **Connection-scoped** — two separate script runs, even as the same user, get independent session state.
+
+Use per-user state when data should follow the user across reconnects (e.g. preferences, history). Use per-session state for transient context that only makes sense within a single interaction (e.g. conversation state, request counters).
 
 ## Environment variables
 
@@ -197,6 +234,7 @@ The script uses the Authorization Code flow with PKCE (S256). No `GITLAB_CLIENT_
 | `BASE_URL` | `http://localhost:{PORT}` | Public URL of this server (used in OAuth redirect URIs) |
 | `HOST` | `127.0.0.1` | Server bind address |
 | `PORT` | `8000` | Server port |
+| `STATE_DB_PATH` | `server_state.db` | Path to the SQLite database used for per-user state |
 | `OAUTH_STORAGE_ENCRYPTION_KEY` | _(unset)_ | Fernet key for encrypting OAuth tokens stored at `~/.fastmcp/oauth-tokens/`. If unset, an ephemeral key is generated each run (tokens survive the session but not a restart). Generate with: `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` |
 
 ## Docker
@@ -238,7 +276,7 @@ The chart is compatible with OpenShift's `restricted-v2` SCC — it sets `runAsN
 
 ```
 .
-├── main.py             # FastMCP server with OIDCProxy auth (--dev flag for local testing)
+├── main.py             # FastMCP server with OIDCProxy auth, per-user (SQLite) and per-session state (--dev flag for local testing)
 ├── client.py           # Demo client using browser-based OAuth flow
 ├── get_gitlab_token.py # Utility: obtain a GitLab OIDC ID token directly via public client + PKCE (no secret required)
 ├── decode_token.py     # Utility: decode a JWT and print its header and claims

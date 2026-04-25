@@ -48,6 +48,10 @@ def _build_token_storage() -> FernetEncryptionWrapper:
     return FernetEncryptionWrapper(key_value=store, fernet=Fernet(key))
 
 
+def _tool_text(result) -> str:
+    return result.content[0].text if result.content else "None"
+
+
 def _format_expiry(expires_at: float | None) -> str:
     if expires_at is None:
         return "no expiry"
@@ -81,12 +85,38 @@ async def main():
         print(f"[client] Available tools: {[t.name for t in tools]}")
 
         result = await client.call_tool("hello", {"name": "OAuth2 World"})
-        print(f"\n[client] hello -> {result.content[0].text}")
+        print(f"\n[client] hello -> {_tool_text(result)}")
 
         result = await client.call_tool("whoami", {})
         whoami = json.loads(result.content[0].text)
         print(f"[client] whoami -> {json.dumps(whoami, indent=2)}")
         print(f"[client] token {_format_expiry(whoami.get('expires_at'))}")
+
+        # --- Per-user state (SQLite-backed, survives server restarts) ----------------
+        print("\n[client] --- Per-user state (persists across runs) ---")
+
+        # Read the visit count from the previous run, then increment and store it.
+        # On first run this returns None; on subsequent runs it shows the accumulated count.
+        result = await client.call_tool("get_user_value", {"key": "visit_count"})
+        prev = _tool_text(result)
+        print(f"[client] visit_count from last run -> {prev}")
+
+        new_count = str(int(prev) + 1) if prev != "None" else "1"
+        result = await client.call_tool("set_user_value", {"key": "visit_count", "value": new_count})
+        print(f"[client] {_tool_text(result)}")
+
+
+        # --- Per-session state (in-memory, lost on disconnect) -----------------------
+        print("\n[client] --- Per-session state (lost when this script exits) ---")
+
+        for _ in range(3):
+            result = await client.call_tool("get_session_value", {"key": "session_counter"})
+            prev = _tool_text(result)
+            new_count = str(int(prev) + 1) if prev != "None" else "1"
+            result = await client.call_tool("set_session_value", {"key": "session_counter", "value": new_count})
+            print(f"[client] {_tool_text(result)}")
+
+        print("\n[client] Done.")
 
     _secure_storage_permissions(directory)
 
