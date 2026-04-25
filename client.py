@@ -14,6 +14,7 @@ restarts. Generate a key with:
 import asyncio
 import json
 import os
+import stat
 import time
 
 from cryptography.fernet import Fernet
@@ -22,6 +23,13 @@ from key_value.aio.wrappers.encryption import FernetEncryptionWrapper
 
 from fastmcp import Client
 from fastmcp.client.auth import OAuth
+
+
+def _secure_storage_permissions(directory: str) -> None:
+    os.chmod(directory, stat.S_IRWXU)
+    db_path = os.path.join(directory, "cache.db")
+    if os.path.exists(db_path):
+        os.chmod(db_path, stat.S_IRUSR | stat.S_IWUSR)
 
 
 def _build_token_storage() -> FernetEncryptionWrapper:
@@ -34,10 +42,10 @@ def _build_token_storage() -> FernetEncryptionWrapper:
             f"         To persist tokens, add to your .env:\n"
             f"           OAUTH_STORAGE_ENCRYPTION_KEY={key}"
         )
-    return FernetEncryptionWrapper(
-        key_value=DiskStore(directory=os.path.expanduser("~/.fastmcp/oauth-tokens")),
-        fernet=Fernet(key),
-    )
+    directory = os.path.expanduser("~/.fastmcp/oauth-tokens")
+    store = DiskStore(directory=directory)
+    _secure_storage_permissions(directory)
+    return FernetEncryptionWrapper(key_value=store, fernet=Fernet(key))
 
 
 def _format_expiry(expires_at: float | None) -> str:
@@ -65,6 +73,7 @@ def _format_duration(seconds: float) -> str:
 async def main():
     server_url = os.environ.get("SERVER_URL", "http://localhost:8000/mcp")
 
+    directory = os.path.expanduser("~/.fastmcp/oauth-tokens")
     async with Client(server_url, auth=OAuth(token_storage=_build_token_storage())) as client:
         print(f"\n[client] Connected to {server_url}")
 
@@ -78,6 +87,8 @@ async def main():
         whoami = json.loads(result.content[0].text)
         print(f"[client] whoami -> {json.dumps(whoami, indent=2)}")
         print(f"[client] token {_format_expiry(whoami.get('expires_at'))}")
+
+    _secure_storage_permissions(directory)
 
 
 if __name__ == "__main__":

@@ -136,9 +136,12 @@ BASE_URL=http://localhost:8000
 
 #### GitLab
 
+##### Option A — MCP server proxy (confidential client)
+
 1. Go to **User Settings → Applications** (or **Admin → Applications** for an instance-wide app)
 2. Enable scopes: `openid profile email`
 3. Set redirect URI to `http://localhost:8000/auth/callback`
+4. Leave **Confidential** checked
 
 ```bash
 OIDC_CONFIG_URL=https://gitlab.example.com/.well-known/openid-configuration
@@ -148,6 +151,30 @@ BASE_URL=http://localhost:8000
 # GitLab issues opaque access tokens — verify the id_token JWT instead
 OIDC_VERIFY_ID_TOKEN=true
 ```
+
+##### Option B — `get_gitlab_token.py` (public client + PKCE)
+
+Use this when you want to obtain a GitLab OIDC ID token directly and pass it to the client, without going through the MCP server proxy.
+
+1. Go to **User Settings → Applications**
+2. Enable scopes: `openid profile email`
+3. Set redirect URI to `http://localhost:9999/callback`
+4. Uncheck **Confidential** — no secret is issued or required
+
+Set only two environment variables:
+
+```bash
+GITLAB_URL=https://gitlab.example.com
+GITLAB_CLIENT_ID=<Application ID>
+```
+
+Then obtain the token and pass it to the client:
+
+```bash
+TOKEN=$(uv run get_gitlab_token.py) uv run client.py
+```
+
+The script uses the Authorization Code flow with PKCE (S256). No `GITLAB_CLIENT_SECRET` is needed.
 
 ---
 
@@ -213,7 +240,7 @@ The chart is compatible with OpenShift's `restricted-v2` SCC — it sets `runAsN
 .
 ├── main.py             # FastMCP server with OIDCProxy auth (--dev flag for local testing)
 ├── client.py           # Demo client using browser-based OAuth flow
-├── get_gitlab_token.py # Utility: obtain a GitLab OIDC token directly (standalone use)
+├── get_gitlab_token.py # Utility: obtain a GitLab OIDC ID token directly via public client + PKCE (no secret required)
 ├── decode_token.py     # Utility: decode a JWT and print its header and claims
 ├── pyproject.toml      # Project dependencies (uv)
 ├── Dockerfile          # UBI9-based container image

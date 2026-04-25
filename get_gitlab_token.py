@@ -1,4 +1,4 @@
-"""Obtain a GitLab OIDC ID token via the authorization code flow.
+"""Obtain a GitLab OIDC ID token via the authorization code flow (public client + PKCE).
 
 The printed ID token is a JWT signed by GitLab's JWKS and can be passed
 directly to the MCP client:
@@ -10,11 +10,11 @@ Prerequisites:
          User Settings → Applications  (or Admin → Applications for instance-wide)
          Scopes:        openid profile email
          Redirect URI:  http://localhost:9999/callback
+         Check "Confidential" OFF  (public client — no secret required)
 
     2. Set the following environment variables (or add them to .env):
          GITLAB_URL        - e.g. https://gitlab.example.com
          GITLAB_CLIENT_ID  - Application ID from step 1
-         GITLAB_CLIENT_SECRET - Secret from step 1
 
     3. Configure the MCP server to validate against GitLab's JWKS:
          JWKS_URI=https://<your-gitlab>/oauth/discovery/keys
@@ -22,9 +22,12 @@ Prerequisites:
          JWT_AUDIENCE=<your-client-id>
 """
 
+import base64
+import hashlib
 import http.server
 import os
 import platform
+import secrets
 import subprocess
 import urllib.parse
 import webbrowser
@@ -36,9 +39,15 @@ load_dotenv()
 
 GITLAB_URL = os.environ["GITLAB_URL"].rstrip("/")
 CLIENT_ID = os.environ["GITLAB_CLIENT_ID"]
-CLIENT_SECRET = os.environ["GITLAB_CLIENT_SECRET"]
 REDIRECT_URI = "http://localhost:9999/callback"
 SCOPE = "openid profile email"
+
+
+def _pkce_pair() -> tuple[str, str]:
+    verifier = secrets.token_urlsafe(64)
+    digest = hashlib.sha256(verifier.encode()).digest()
+    challenge = base64.urlsafe_b64encode(digest).rstrip(b"=").decode()
+    return verifier, challenge
 
 _code: dict[str, str] = {}
 
@@ -61,12 +70,16 @@ class _CallbackHandler(http.server.BaseHTTPRequestHandler):
 
 
 def main():
+    code_verifier, code_challenge = _pkce_pair()
+
     auth_url = (
         f"{GITLAB_URL}/oauth/authorize"
         f"?client_id={CLIENT_ID}"
         f"&redirect_uri={urllib.parse.quote(REDIRECT_URI, safe='')}"
         f"&response_type=code"
         f"&scope={urllib.parse.quote(SCOPE)}"
+        f"&code_challenge={code_challenge}"
+        f"&code_challenge_method=S256"
     )
 
     browser = os.environ.get("BROWSER")
@@ -87,8 +100,8 @@ def main():
         f"{GITLAB_URL}/oauth/token",
         data={
             "client_id": CLIENT_ID,
-            "client_secret": CLIENT_SECRET,
             "code": code,
+            "code_verifier": code_verifier,
             "grant_type": "authorization_code",
             "redirect_uri": REDIRECT_URI,
         },
