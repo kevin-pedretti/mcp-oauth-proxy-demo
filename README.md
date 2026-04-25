@@ -44,7 +44,9 @@ uv run main.py --dev
 uv run client.py
 ```
 
-On first run the client opens your browser, completes a local OAuth flow (no login required — the in-memory provider auto-approves), then calls both tools:
+On first run the client opens your browser, completes a local OAuth flow (no login required — the in-memory provider auto-approves), then calls both tools.
+
+Tokens are stored encrypted on disk at `~/.fastmcp/oauth-tokens/` so subsequent runs skip the browser flow. Set `OAUTH_STORAGE_ENCRYPTION_KEY` in your `.env` to persist tokens across restarts (see [Environment variables](#environment-variables)).
 
 ```
 [client] Connected to http://localhost:8000/mcp
@@ -168,6 +170,7 @@ OIDC_VERIFY_ID_TOKEN=true
 | `BASE_URL` | `http://localhost:{PORT}` | Public URL of this server (used in OAuth redirect URIs) |
 | `HOST` | `127.0.0.1` | Server bind address |
 | `PORT` | `8000` | Server port |
+| `OAUTH_STORAGE_ENCRYPTION_KEY` | _(unset)_ | Fernet key for encrypting OAuth tokens stored at `~/.fastmcp/oauth-tokens/`. If unset, an ephemeral key is generated each run (tokens survive the session but not a restart). Generate with: `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` |
 
 ## Docker
 
