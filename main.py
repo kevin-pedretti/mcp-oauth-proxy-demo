@@ -116,9 +116,7 @@ mcp = FastMCP(name="Hello World MCP")
 def hello(name: str = "World") -> str:
     """Say hello. Requires the 'openid' scope."""
     require_scope("openid")
-    token = get_access_token()
-    subject = token.claims.get("sub", "unknown") if token else "unknown"
-    return f"Hello, {name}! (authenticated as: {subject})"
+    return f"Hello, {name}! (authenticated as: {get_user_sub()})"
 
 
 @mcp.tool
