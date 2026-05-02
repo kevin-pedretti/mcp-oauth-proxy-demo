@@ -26,6 +26,7 @@ import sqlite3
 from pathlib import Path
 
 from fastmcp import Context, FastMCP
+from fastmcp.exceptions import AuthorizationError
 from fastmcp.server.dependencies import get_access_token
 
 
@@ -36,7 +37,11 @@ from fastmcp.server.dependencies import get_access_token
 # ---------------------------------------------------------------------------
 
 def _db_path() -> Path:
-    return Path(os.environ.get("STATE_DB_PATH", "server_state.db"))
+    # Anchor the default to this file's directory, not cwd. Containers and
+    # systemd units can run with surprising working directories; resolving
+    # against __file__ keeps the DB next to the server module regardless.
+    default = Path(__file__).resolve().parent / "server_state.db"
+    return Path(os.environ.get("STATE_DB_PATH") or default)
 
 
 def _connect() -> sqlite3.Connection:
@@ -92,11 +97,15 @@ _dev_mode: bool = False
 
 
 def require_scope(scope: str) -> None:
+    # AuthorizationError is FastMCP's canonical exception for auth failures.
+    # The framework catches it in tool listings/lookups and surfaces a
+    # structured error to the client — using PermissionError leaks as a
+    # generic 500 instead.
     token = get_access_token()
     if token is None:
-        raise PermissionError("No authenticated token")
+        raise AuthorizationError("No authenticated token")
     if scope not in (token.scopes or []):
-        raise PermissionError(f"Token missing required scope: '{scope}'")
+        raise AuthorizationError(f"Token missing required scope: '{scope}'")
 
 
 def get_user_sub() -> str:

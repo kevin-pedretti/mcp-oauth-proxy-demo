@@ -99,7 +99,16 @@ def main():
     # and binding to all interfaces would let any process on the host (or any
     # peer on a shared LAN) race to receive the authorization code.
     httpd = http.server.HTTPServer(("127.0.0.1", 9999), _CallbackHandler)
+    # handle_request() will block forever waiting for a callback if the user
+    # closes the browser. Set a server timeout so it returns cleanly instead.
+    httpd.timeout = 120
     httpd.handle_request()
+
+    if not _callback:
+        raise RuntimeError(
+            f"No callback received within {httpd.timeout}s — did the GitLab login complete? "
+            "Re-run get_gitlab_token.py to retry."
+        )
 
     returned_state = _callback.get("state", "")
     if not secrets.compare_digest(state, returned_state):

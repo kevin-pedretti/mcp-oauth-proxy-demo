@@ -22,10 +22,12 @@ import asyncio
 import json
 import os
 import stat
+import sys
 import time
 
 from cryptography.fernet import Fernet
 from key_value.aio.stores.disk import DiskStore
+from key_value.aio.stores.memory import MemoryStore
 from key_value.aio.wrappers.encryption import FernetEncryptionWrapper
 
 from fastmcp import Client
@@ -33,26 +35,45 @@ from fastmcp.client.auth import BearerAuth, OAuth
 
 
 def _secure_storage_permissions(directory: str) -> None:
+    # os.chmod is a no-op on Windows — POSIX permission bits do not apply.
+    # Bail out explicitly rather than silently appearing to harden the cache.
+    # Windows users get whatever the default ACL on the home directory is;
+    # for stronger at-rest protection on Windows, encrypt the volume or use
+    # a different token store.
+    if os.name != "posix":
+        return
     os.chmod(directory, stat.S_IRWXU)
     db_path = os.path.join(directory, "cache.db")
     if os.path.exists(db_path):
         os.chmod(db_path, stat.S_IRUSR | stat.S_IWUSR)
 
 
-def _build_token_storage() -> FernetEncryptionWrapper:
+def _build_token_storage() -> tuple[object, str | None]:
+    """Return ``(token_store, directory_to_chmod_or_None)``.
+
+    When OAUTH_STORAGE_ENCRYPTION_KEY is set, persist tokens to an encrypted
+    on-disk store. When it isn't, fall back to in-memory storage — writing
+    Fernet-encrypted blobs with an ephemeral key would leave unrecoverable
+    garbage in ~/.fastmcp/oauth-tokens on every run.
+    """
     key = os.environ.get("OAUTH_STORAGE_ENCRYPTION_KEY")
     if not key:
-        key = Fernet.generate_key().decode()
+        # stderr so the message can't pollute stdout (matters when callers
+        # capture output, e.g. TOKEN=$(uv run client.py)).
         print(
-            "[client] OAUTH_STORAGE_ENCRYPTION_KEY not set — generated an ephemeral key.\n"
-            "         Tokens will be stored this session but won't survive a restart.\n"
-            f"         To persist tokens, add to your .env:\n"
-            f"           OAUTH_STORAGE_ENCRYPTION_KEY={key}"
+            "[client] OAUTH_STORAGE_ENCRYPTION_KEY not set — using in-memory token storage.\n"
+            "         Tokens will be lost when this script exits.\n"
+            "         To persist across runs, generate a key with:\n"
+            '           python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"\n'
+            "         and add it to .env as OAUTH_STORAGE_ENCRYPTION_KEY.",
+            file=sys.stderr,
         )
+        return MemoryStore(), None
+
     directory = os.path.expanduser("~/.fastmcp/oauth-tokens")
     store = DiskStore(directory=directory)
     _secure_storage_permissions(directory)
-    return FernetEncryptionWrapper(key_value=store, fernet=Fernet(key))
+    return FernetEncryptionWrapper(key_value=store, fernet=Fernet(key)), directory
 
 
 def _tool_text(result) -> str:
@@ -90,8 +111,8 @@ async def main():
         directory = None
         print(f"[client] Using bearer token from $TOKEN (skipping browser OAuth flow)")
     else:
-        directory = os.path.expanduser("~/.fastmcp/oauth-tokens")
-        auth = OAuth(token_storage=_build_token_storage())
+        storage, directory = _build_token_storage()
+        auth = OAuth(token_storage=storage)
 
     async with Client(server_url, auth=auth) as client:
         print(f"\n[client] Connected to {server_url}")
