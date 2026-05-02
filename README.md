@@ -48,25 +48,47 @@ On first run the client opens your browser, completes a local OAuth flow (no log
 
 Tokens are stored encrypted on disk at `~/.fastmcp/oauth-tokens/` so subsequent runs skip the browser flow. Set `OAUTH_STORAGE_ENCRYPTION_KEY` in your `.env` to persist tokens across restarts (see [Environment variables](#environment-variables)).
 
+First run:
+
 ```
 [client] Connected to http://localhost:8000/mcp
 [client] Available tools: ['hello', 'whoami', 'set_user_value', 'get_user_value', 'set_session_value', 'get_session_value']
 
-[client] hello -> Hello, OAuth2 World! (authenticated as: unknown)
-[client] whoami -> {"client_id": "...", "scopes": ["openid", "profile"], ...}
+[client] hello -> Hello, OAuth2 World! (authenticated as: dev-user)
+[client] whoami -> {"client_id": "...", "scopes": ["openid", "profile"], "subject": null, "issuer": null, ...}
+[client] token expires in 1h0m0s
 
 [client] --- Per-user state (persists across runs) ---
-[client] set_user_value  -> stored user['favorite_color'] = 'blue'
-[client] get_user_value  -> blue
-[client] get_user_value (missing) -> None
+[client] visit_count from last run -> None
+[client] stored user['visit_count'] = '1'
 
 [client] --- Per-session state (lost when this script exits) ---
-[client] set_session_value -> stored session['request_count'] = '42' (session abcd1234…)
-[client] get_session_value -> 42
-[client] get_session_value (missing) -> None
+[client] stored session['session_counter'] = '1' (session abcd1234…)
+[client] stored session['session_counter'] = '2' (session abcd1234…)
+[client] stored session['session_counter'] = '3' (session abcd1234…)
+
+[client] Done.
 ```
 
-> **Note:** With `--dev`, `subject` and `issuer` are `null` in `whoami` — the in-memory provider issues opaque tokens, not JWTs, so there are no identity claims. The user state tools store keys under `"unknown"` as the subject in this mode.
+Second run (per-user `visit_count` persisted; `session_counter` resets to 1):
+
+```
+[client] hello -> Hello, OAuth2 World! (authenticated as: dev-user)
+...
+
+[client] --- Per-user state (persists across runs) ---
+[client] visit_count from last run -> 1
+[client] stored user['visit_count'] = '2'
+
+[client] --- Per-session state (lost when this script exits) ---
+[client] stored session['session_counter'] = '1' (session efgh5678…)
+[client] stored session['session_counter'] = '2' (session efgh5678…)
+[client] stored session['session_counter'] = '3' (session efgh5678…)
+
+[client] Done.
+```
+
+> **Note:** With `--dev`, `subject` and `issuer` are `null` in `whoami` — the in-memory provider issues opaque tokens, not JWTs, so there are no identity claims. Per-user state is keyed by `"dev-user"` in this mode.
 
 ## Connecting to a real OIDC provider
 
@@ -211,7 +233,7 @@ This server demonstrates two patterns for maintaining state across tool calls.
 - **Identity-scoped** — the same user reconnecting from a different client or in a new session sees the same values.
 - **Isolated** — different users never see each other's values.
 
-The database path can be overridden with the `STATE_DB_PATH` environment variable.
+The database path can be overridden with the `STATE_DB_PATH` environment variable. In `--dev` mode, where the in-memory provider issues opaque tokens with no `sub` claim, the key falls back to the fixed string `"dev-user"`.
 
 ### Per-session state
 
