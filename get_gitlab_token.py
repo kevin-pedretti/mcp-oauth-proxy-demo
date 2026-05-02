@@ -49,7 +49,7 @@ def _pkce_pair() -> tuple[str, str]:
     challenge = base64.urlsafe_b64encode(digest).rstrip(b"=").decode()
     return verifier, challenge
 
-_code: dict[str, str] = {}
+_callback: dict[str, str] = {}
 
 
 class _CallbackHandler(http.server.BaseHTTPRequestHandler):
@@ -60,7 +60,8 @@ class _CallbackHandler(http.server.BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(b"Missing 'code' parameter.")
             return
-        _code["value"] = qs["code"][0]
+        _callback["code"] = qs["code"][0]
+        _callback["state"] = qs.get("state", [""])[0]
         self.send_response(200)
         self.end_headers()
         self.wfile.write(b"Authentication successful - you can close this tab.")
@@ -71,6 +72,10 @@ class _CallbackHandler(http.server.BaseHTTPRequestHandler):
 
 def main():
     code_verifier, code_challenge = _pkce_pair()
+    # Random state binds the callback to this specific flow — defends against
+    # CSRF on the redirect URI. PKCE protects the token exchange; state
+    # protects the callback dispatch. Both are recommended.
+    state = secrets.token_urlsafe(32)
 
     auth_url = (
         f"{GITLAB_URL}/oauth/authorize"
@@ -78,6 +83,7 @@ def main():
         f"&redirect_uri={urllib.parse.quote(REDIRECT_URI, safe='')}"
         f"&response_type=code"
         f"&scope={urllib.parse.quote(SCOPE)}"
+        f"&state={state}"
         f"&code_challenge={code_challenge}"
         f"&code_challenge_method=S256"
     )
@@ -89,10 +95,20 @@ def main():
     else:
         webbrowser.open(auth_url)
 
-    httpd = http.server.HTTPServer(("", 9999), _CallbackHandler)
+    # Bind to loopback only — the redirect URI is http://localhost:9999/callback
+    # and binding to all interfaces would let any process on the host (or any
+    # peer on a shared LAN) race to receive the authorization code.
+    httpd = http.server.HTTPServer(("127.0.0.1", 9999), _CallbackHandler)
     httpd.handle_request()
 
-    code = _code.get("value")
+    returned_state = _callback.get("state", "")
+    if not secrets.compare_digest(state, returned_state):
+        raise RuntimeError(
+            "OAuth state mismatch — the callback did not originate from this flow. "
+            "Aborting to prevent CSRF / code injection."
+        )
+
+    code = _callback.get("code")
     if not code:
         raise RuntimeError("No authorization code received.")
 
