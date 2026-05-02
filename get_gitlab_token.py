@@ -16,10 +16,10 @@ Prerequisites:
          GITLAB_URL        - e.g. https://gitlab.example.com
          GITLAB_CLIENT_ID  - Application ID from step 1
 
-    3. Configure the MCP server to validate against GitLab's JWKS:
-         JWKS_URI=https://<your-gitlab>/oauth/discovery/keys
-         JWT_ISSUER=https://<your-gitlab>
-         JWT_AUDIENCE=<your-client-id>
+    3. Configure main.py to validate the id_token against GitLab's JWKS:
+         OIDC_CONFIG_URL=https://<your-gitlab>/.well-known/openid-configuration
+         OIDC_CLIENT_ID=<your-client-id>
+         OIDC_VERIFY_ID_TOKEN=true   # GitLab issues opaque access tokens
 """
 
 import base64

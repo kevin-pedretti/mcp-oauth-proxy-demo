@@ -1,10 +1,17 @@
 """Demo MCP client that authenticates via the OAuth browser flow.
 
 Usage:
-    uv run client.py
+    uv run client.py                                  # browser OAuth flow
+    TOKEN=<bearer-token> uv run client.py             # pre-issued bearer token
+    TOKEN=$(uv run get_gitlab_token.py) uv run client.py
 
-The client will open your browser for OAuth authorization on first run.
-Subsequent runs reuse cached tokens (persisted to disk, encrypted).
+When TOKEN is set, the client skips the browser flow and sends the value
+as a bearer token. Useful for headless / CI scenarios, or when paired with
+`get_gitlab_token.py` to use a GitLab id_token directly.
+
+Otherwise the client opens your browser for OAuth authorization on first
+run and reuses cached tokens (persisted to disk, encrypted) on subsequent
+runs.
 
 Set OAUTH_STORAGE_ENCRYPTION_KEY in your .env to persist tokens across
 restarts. Generate a key with:
@@ -22,7 +29,7 @@ from key_value.aio.stores.disk import DiskStore
 from key_value.aio.wrappers.encryption import FernetEncryptionWrapper
 
 from fastmcp import Client
-from fastmcp.client.auth import OAuth
+from fastmcp.client.auth import BearerAuth, OAuth
 
 
 def _secure_storage_permissions(directory: str) -> None:
@@ -76,9 +83,17 @@ def _format_duration(seconds: float) -> str:
 
 async def main():
     server_url = os.environ.get("SERVER_URL", "http://localhost:8000/mcp")
+    token = os.environ.get("TOKEN")
 
-    directory = os.path.expanduser("~/.fastmcp/oauth-tokens")
-    async with Client(server_url, auth=OAuth(token_storage=_build_token_storage())) as client:
+    if token:
+        auth = BearerAuth(token)
+        directory = None
+        print(f"[client] Using bearer token from $TOKEN (skipping browser OAuth flow)")
+    else:
+        directory = os.path.expanduser("~/.fastmcp/oauth-tokens")
+        auth = OAuth(token_storage=_build_token_storage())
+
+    async with Client(server_url, auth=auth) as client:
         print(f"\n[client] Connected to {server_url}")
 
         tools = await client.list_tools()
@@ -118,7 +133,8 @@ async def main():
 
         print("\n[client] Done.")
 
-    _secure_storage_permissions(directory)
+    if directory is not None:
+        _secure_storage_permissions(directory)
 
 
 if __name__ == "__main__":
