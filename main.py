@@ -39,8 +39,24 @@ def _db_path() -> Path:
     return Path(os.environ.get("STATE_DB_PATH", "server_state.db"))
 
 
+def _connect() -> sqlite3.Connection:
+    """Open a SQLite connection with sane concurrency settings.
+
+    busy_timeout is per-connection — it must be set on every new connection,
+    not just at init — so all DB access funnels through this helper.
+    """
+    conn = sqlite3.connect(_db_path())
+    # Wait up to 5 s for a lock instead of failing immediately with SQLITE_BUSY.
+    conn.execute("PRAGMA busy_timeout = 5000")
+    return conn
+
+
 def _init_db() -> None:
-    with sqlite3.connect(_db_path()) as conn:
+    with _connect() as conn:
+        # WAL mode lets readers and a single writer run concurrently — readers
+        # no longer block on a writer, and vice versa. The setting is persistent
+        # (recorded in the database header), so this only needs to be set once.
+        conn.execute("PRAGMA journal_mode = WAL")
         conn.execute("""
             CREATE TABLE IF NOT EXISTS user_state (
                 sub   TEXT NOT NULL,
@@ -52,7 +68,7 @@ def _init_db() -> None:
 
 
 def _db_set(sub: str, key: str, value: str) -> None:
-    with sqlite3.connect(_db_path()) as conn:
+    with _connect() as conn:
         conn.execute(
             "INSERT OR REPLACE INTO user_state (sub, key, value) VALUES (?, ?, ?)",
             (sub, key, value),
@@ -60,7 +76,7 @@ def _db_set(sub: str, key: str, value: str) -> None:
 
 
 def _db_get(sub: str, key: str) -> str | None:
-    with sqlite3.connect(_db_path()) as conn:
+    with _connect() as conn:
         row = conn.execute(
             "SELECT value FROM user_state WHERE sub = ? AND key = ?",
             (sub, key),
