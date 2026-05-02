@@ -3,7 +3,7 @@
 Usage:
     python decode_token.py <token>
     python decode_token.py                        # reads from TOKEN env var
-    TOKEN=$(python generate_token.py) python decode_token.py
+    TOKEN=$(uv run get_gitlab_token.py) python decode_token.py
 """
 
 import argparse
