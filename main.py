@@ -239,7 +239,10 @@ def main():
     base_url = os.environ.get("BASE_URL", f"http://localhost:{args.port}")
     mcp.auth = build_auth(dev=args.dev, base_url=base_url)
 
-    mcp.run(transport="streamable-http", host=args.host, port=args.port)
+    try:
+        mcp.run(transport="streamable-http", host=args.host, port=args.port)
+    except KeyboardInterrupt:
+        pass
 
 
 if __name__ == "__main__":
