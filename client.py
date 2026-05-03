@@ -109,6 +109,13 @@ class _OAuthRetryFilter(logging.Filter):
     The mcp library logs a full traceback whenever the authorization flow fails
     on the way to fastmcp's retry handler. These two cases are normal recovery
     paths, not real errors, so we swap the noisy output for something readable.
+
+    Brittleness warning: the matches below are tied to exact log text emitted
+    by ``mcp/client/auth/oauth2.py``. If the upstream library tweaks a single
+    character, this filter silently stops working and the noisy tracebacks
+    return. The ``mcp`` range in ``pyproject.toml`` is pinned to a version
+    range these strings have been validated against — re-check both matches
+    when widening that pin.
     """
 
     def filter(self, record: logging.LogRecord) -> bool:
