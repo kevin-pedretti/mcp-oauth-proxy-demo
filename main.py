@@ -16,7 +16,9 @@ Environment variables (required unless --dev is set):
     BASE_URL              - Public URL of this MCP server (default: http://localhost:8000)
     HOST               - Server host (default: 127.0.0.1)
     PORT               - Server port (default: 8000)
-    STATE_DB_PATH      - Path to SQLite database for per-user state (default: server_state.db)
+    STATE_DB_PATH      - Path to SQLite database for per-user state.
+                         Defaults to server_state.db next to this file
+                         (resolved against __file__, not the cwd).
 """
 
 import argparse
