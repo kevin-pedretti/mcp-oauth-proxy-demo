@@ -46,7 +46,9 @@ uv run client.py
 
 On first run the client opens your browser, completes a local OAuth flow (no login required — the in-memory provider auto-approves), then calls all tools.
 
-Tokens are stored encrypted on disk at `~/.fastmcp/oauth-tokens/` so subsequent runs skip the browser flow. Set `OAUTH_STORAGE_ENCRYPTION_KEY` in your `.env` to persist tokens across restarts (see [Environment variables](#environment-variables)).
+Tokens are kept in memory for the life of the process by default and discarded on exit, so each fresh `uv run client.py` re-does the browser flow. To persist tokens across runs, set `OAUTH_STORAGE_ENCRYPTION_KEY` in your `.env` — the client then writes Fernet-encrypted tokens to `~/.fastmcp/oauth-tokens/` and subsequent runs skip the browser flow until the cached token expires (see [Environment variables](#environment-variables)).
+
+For headless / CI use or to skip the browser flow entirely, pass a pre-issued bearer token via the `TOKEN` env var: `TOKEN=<jwt> uv run client.py`. See also [`get_gitlab_token.py`](#option-b--get_gitlab_tokenpy-public-client--pkce) for obtaining a GitLab id_token to use this way.
 
 First run:
 
@@ -258,6 +260,8 @@ Use per-user state when data should follow the user across reconnects (e.g. pref
 | `PORT` | `8000` | Server port |
 | `STATE_DB_PATH` | `<server-dir>/server_state.db` | Path to the SQLite database used for per-user state. Defaults to `server_state.db` next to `main.py` so it's predictable regardless of the working directory the server is launched from. |
 | `OAUTH_STORAGE_ENCRYPTION_KEY` | _(unset)_ | Fernet key for encrypting OAuth tokens stored at `~/.fastmcp/oauth-tokens/`. If unset, the client falls back to in-memory token storage — tokens are kept for the life of the process and discarded on exit, with nothing written to disk. Generate a persistent key with: `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` |
+| `TOKEN` _(client only)_ | _(unset)_ | Pre-issued bearer token for the client. When set, `client.py` skips the browser-based OAuth flow and the on-disk/in-memory token cache, sending the value as `Authorization: Bearer <TOKEN>` directly. Useful for headless / CI runs and for pairing with `get_gitlab_token.py` (`TOKEN=$(uv run get_gitlab_token.py) uv run client.py`). |
+| `SERVER_URL` _(client only)_ | `http://localhost:8000/mcp` | URL the client connects to. |
 
 ## Docker
 
