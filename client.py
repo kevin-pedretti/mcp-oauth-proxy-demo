@@ -20,6 +20,7 @@ restarts. Generate a key with:
 
 import asyncio
 import json
+import logging
 import os
 import stat
 import sys
@@ -100,6 +101,41 @@ def _format_duration(seconds: float) -> str:
         s %= 60
     parts.append(f"{s}s")
     return " ".join(parts)
+
+
+class _OAuthRetryFilter(logging.Filter):
+    """Replace expected OAuth retry log noise with clean one-line status messages.
+
+    The mcp library logs a full traceback whenever the authorization flow fails
+    on the way to fastmcp's retry handler. These two cases are normal recovery
+    paths, not real errors, so we swap the noisy output for something readable.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        msg = record.getMessage()
+
+        if msg.startswith("Token refresh failed:"):
+            code = msg.split(": ", 1)[1]
+            print(
+                f"[client] Cached token is no longer valid ({code}) — will re-authenticate.",
+                file=sys.stderr,
+            )
+            return False
+
+        if msg == "OAuth flow error" and record.exc_info:
+            exc_type = record.exc_info[0]
+            if exc_type is not None and exc_type.__name__ == "ClientNotFoundError":
+                print(
+                    "[client] Cached OAuth client not recognised by server"
+                    " — clearing credentials and re-registering.",
+                    file=sys.stderr,
+                )
+                return False
+
+        return True
+
+
+logging.getLogger("mcp.client.auth.oauth2").addFilter(_OAuthRetryFilter())
 
 
 async def main():
