@@ -213,6 +213,12 @@ def build_auth(dev: bool, base_url: str):
         )
 
     from fastmcp.server.auth.oidc_proxy import OIDCProxy
+    missing = [v for v in ("OIDC_CONFIG_URL", "OIDC_CLIENT_ID") if not os.environ.get(v)]
+    if missing:
+        raise SystemExit(
+            f"error: missing required environment variable(s): {', '.join(missing)}\n"
+            "Set them to your OIDC provider's values, or pass --dev to use the in-memory provider."
+        )
     verify_id_token = os.environ.get("OIDC_VERIFY_ID_TOKEN", "").lower() in ("1", "true")
     return OIDCProxy(
         config_url=os.environ["OIDC_CONFIG_URL"],
