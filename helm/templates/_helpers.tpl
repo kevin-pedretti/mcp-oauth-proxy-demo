@@ -57,4 +57,7 @@ that always renders (e.g. deployment.yaml) so misconfigurations fail at
 {{- if and (not .Values.auth.oidcClientSecret) (not .Values.auth.existingSecret) -}}
 {{- fail "auth.oidcClientSecret (or auth.existingSecret) is required: set the client secret literally, or point to a pre-existing Kubernetes Secret via auth.existingSecret" -}}
 {{- end -}}
+{{- if and .Values.route.enabled (not .Values.auth.baseUrl) -}}
+{{- fail "auth.baseUrl is required when route.enabled is true: set it to the external HTTPS URL of the Route (e.g. https://<route-hostname>) so redirect URIs sent to your OIDC provider are correct" -}}
+{{- end -}}
 {{- end -}}
