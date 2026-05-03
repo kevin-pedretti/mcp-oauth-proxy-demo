@@ -3,7 +3,7 @@
 {{- end }}
 
 {{- define "mcp-oauth2-demo.fullname" -}}
-{{- if .Release.Name | eq .Chart.Name }}
+{{- if eq .Release.Name .Chart.Name }}
 {{- .Release.Name | trunc 63 | trimSuffix "-" }}
 {{- else }}
 {{- printf "%s-%s" .Release.Name .Chart.Name | trunc 63 | trimSuffix "-" }}
