@@ -1,3 +1,5 @@
+# NOTE: :latest floats. For full reproducibility pin to a digest or a specific
+# minor tag (e.g. registry.access.redhat.com/ubi9/python-312:9.5-1742850438).
 FROM registry.access.redhat.com/ubi9/python-312
 
 WORKDIR /app

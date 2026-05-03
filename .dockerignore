@@ -1,6 +1,12 @@
+.git
 .venv
-.env
+.env*
 *.pyc
 __pycache__
+**/__pycache__
+*.db*
+helm/
+README*.md
 client.py
 decode_token.py
+get_gitlab_token.py

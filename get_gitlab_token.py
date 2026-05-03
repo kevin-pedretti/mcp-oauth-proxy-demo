@@ -89,7 +89,7 @@ def main():
     )
 
     browser = os.environ.get("BROWSER")
-    print(f"[get_gitlab_token] Opening browser for GitLab login...", flush=True)
+    print("[get_gitlab_token] Opening browser for GitLab login...", flush=True)
     if browser and platform.system() == "Darwin":
         subprocess.Popen(["open", "-a", browser, auth_url])
     else:

@@ -10,7 +10,7 @@ Environment variables (required unless --dev is set):
     OIDC_CLIENT_ID     - OAuth application client ID
     OIDC_CLIENT_SECRET    - OAuth application client secret
     OIDC_AUDIENCE         - API audience identifier (required by some providers like Auth0)
-    OIDC_VERIFY_ID_TOKEN  - Set to "true" to verify the id_token instead of the access_token.
+    OIDC_VERIFY_ID_TOKEN  - Set to "true" or "1" to verify the id_token instead of the access_token.
                             Use this when the provider issues opaque (non-JWT) access tokens
                             (e.g. GitLab). Default: false.
     BASE_URL              - Public URL of this MCP server (default: http://localhost:8000)

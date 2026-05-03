@@ -12,3 +12,9 @@ dependencies = [
     "pyjwt>=2.8",
     "python-dotenv>=1.0",
 ]
+
+[dependency-groups]
+dev = ["mypy>=1.10", "ruff>=0.4"]
+
+[tool.ruff]
+line-length = 100
