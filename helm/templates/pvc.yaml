@@ -5,6 +5,10 @@ metadata:
   name: {{ include "mcp-oauth2-demo.fullname" . }}
   labels:
     {{- include "mcp-oauth2-demo.labels" . | nindent 4 }}
+  {{- if .Values.persistence.keepOnDelete }}
+  annotations:
+    helm.sh/resource-policy: keep
+  {{- end }}
 spec:
   accessModes:
     {{- toYaml .Values.persistence.accessModes | nindent 4 }}

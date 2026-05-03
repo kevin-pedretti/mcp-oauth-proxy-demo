@@ -57,6 +57,12 @@ route:
 # starts.
 persistence:
   enabled: true
+  # By default, uninstalling this release will delete the chart-managed PVC
+  # and permanently lose all per-user state. Set keepOnDelete: true to add
+  # the helm.sh/resource-policy: keep annotation, which causes Helm to leave
+  # the PVC (and its data) in place on uninstall. You are then responsible
+  # for deleting it manually when no longer needed.
+  keepOnDelete: false
   # Reference an existing PVC instead of letting the chart create one.
   existingClaim: ""
   size: 1Gi
