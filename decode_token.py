@@ -27,6 +27,16 @@ def main():
     header = jwt.get_unverified_header(token)
     claims = jwt.decode(token, options={"verify_signature": False})
 
+    # Warn loudly so nobody mistakes the decoded claims for trustworthy
+    # claims. Goes to stderr so it stays visible even if stdout is
+    # redirected to a file.
+    print(
+        "WARNING: signature NOT verified — these claims are decoded blindly\n"
+        "         and must not be trusted for any authentication or\n"
+        "         authorization decision.\n",
+        file=sys.stderr,
+    )
+
     print("=== Header ===")
     print(json.dumps(header, indent=2))
     print("\n=== Claims ===")
