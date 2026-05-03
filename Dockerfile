@@ -18,4 +18,4 @@ ENV HOST=0.0.0.0
 
 EXPOSE 8000
 
-ENTRYPOINT ["/app/.venv/bin/python", "main.py"]
+CMD ["/app/.venv/bin/python", "main.py"]
