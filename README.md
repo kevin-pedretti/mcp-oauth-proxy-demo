@@ -256,8 +256,8 @@ Use per-user state when data should follow the user across reconnects (e.g. pref
 | `BASE_URL` | `http://localhost:{PORT}` | Public URL of this server (used in OAuth redirect URIs) |
 | `HOST` | `127.0.0.1` | Server bind address |
 | `PORT` | `8000` | Server port |
-| `STATE_DB_PATH` | `server_state.db` | Path to the SQLite database used for per-user state |
-| `OAUTH_STORAGE_ENCRYPTION_KEY` | _(unset)_ | Fernet key for encrypting OAuth tokens stored at `~/.fastmcp/oauth-tokens/`. If unset, an ephemeral key is generated each run (tokens survive the session but not a restart). Generate with: `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` |
+| `STATE_DB_PATH` | `<server-dir>/server_state.db` | Path to the SQLite database used for per-user state. Defaults to `server_state.db` next to `main.py` so it's predictable regardless of the working directory the server is launched from. |
+| `OAUTH_STORAGE_ENCRYPTION_KEY` | _(unset)_ | Fernet key for encrypting OAuth tokens stored at `~/.fastmcp/oauth-tokens/`. If unset, the client falls back to in-memory token storage — tokens are kept for the life of the process and discarded on exit, with nothing written to disk. Generate a persistent key with: `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` |
 
 ## Docker
 
