@@ -49,10 +49,8 @@ def _secure_storage_permissions(directory: str) -> None:
         os.chmod(db_path, stat.S_IRUSR | stat.S_IWUSR)
 
 
-def _build_token_storage() -> tuple[object, str | None]:
-    """Return ``(token_store, directory_to_chmod_or_None)``.
-
-    When OAUTH_STORAGE_ENCRYPTION_KEY is set, persist tokens to an encrypted
+def _build_token_storage() -> object:
+    """When OAUTH_STORAGE_ENCRYPTION_KEY is set, persist tokens to an encrypted
     on-disk store. When it isn't, fall back to in-memory storage — writing
     Fernet-encrypted blobs with an ephemeral key would leave unrecoverable
     garbage in ~/.fastmcp/oauth-tokens on every run.
@@ -69,12 +67,12 @@ def _build_token_storage() -> tuple[object, str | None]:
             "         and add it to .env as OAUTH_STORAGE_ENCRYPTION_KEY.",
             file=sys.stderr,
         )
-        return MemoryStore(), None
+        return MemoryStore()
 
     directory = os.path.expanduser("~/.fastmcp/oauth-tokens")
     store = DiskStore(directory=directory)
     _secure_storage_permissions(directory)
-    return FernetEncryptionWrapper(key_value=store, fernet=Fernet(key)), directory
+    return FernetEncryptionWrapper(key_value=store, fernet=Fernet(key))
 
 
 def _tool_text(result) -> str | None:
@@ -151,11 +149,9 @@ async def main():
 
     if token:
         auth = BearerAuth(token)
-        directory = None
         print(f"[client] Using bearer token from $TOKEN (skipping browser OAuth flow)")
     else:
-        storage, directory = _build_token_storage()
-        auth = OAuth(token_storage=storage)
+        auth = OAuth(token_storage=_build_token_storage())
 
     async with Client(server_url, auth=auth) as client:
         print(f"\n[client] Connected to {server_url}")
@@ -196,9 +192,6 @@ async def main():
             print(f"[client] {_tool_text(result)}")
 
         print("\n[client] Done.")
-
-    if directory is not None:
-        _secure_storage_permissions(directory)
 
 
 if __name__ == "__main__":
