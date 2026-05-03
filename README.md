@@ -1,4 +1,4 @@
-# mcp-oauth-proxy-demo
+# mcp-oauth2-demo
 
 A "hello world" [MCP](https://modelcontextprotocol.io) server built with [FastMCP](https://gofastmcp.com) that demonstrates the **OIDC proxy** authentication pattern.
 
