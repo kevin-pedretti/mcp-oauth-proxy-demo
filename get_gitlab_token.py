@@ -32,7 +32,7 @@ import subprocess
 import urllib.parse
 import webbrowser
 
-import requests
+import httpx
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -121,7 +121,7 @@ def main():
     if not code:
         raise RuntimeError("No authorization code received.")
 
-    resp = requests.post(
+    resp = httpx.post(
         f"{GITLAB_URL}/oauth/token",
         data={
             "client_id": CLIENT_ID,
