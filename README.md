@@ -298,6 +298,12 @@ helm install my-release helm/ \
 
 The chart is compatible with OpenShift's `restricted-v2` SCC — it sets `runAsNonRoot: true` and drops all Linux capabilities without pinning a UID, allowing OpenShift to assign one at runtime.
 
+## Running the tests
+
+```bash
+uv run pytest test_integration.py -v
+```
+
 ## Project structure
 
 ```
