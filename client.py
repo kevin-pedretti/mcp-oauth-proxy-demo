@@ -77,8 +77,8 @@ def _build_token_storage() -> tuple[object, str | None]:
     return FernetEncryptionWrapper(key_value=store, fernet=Fernet(key)), directory
 
 
-def _tool_text(result) -> str:
-    return result.content[0].text if result.content else "None"
+def _tool_text(result) -> str | None:
+    return result.content[0].text if result.content else None
 
 
 def _format_expiry(expires_at: float | None) -> str:
@@ -173,7 +173,7 @@ async def main():
         prev = _tool_text(result)
         print(f"[client] visit_count from last run -> {prev}")
 
-        new_count = str(int(prev) + 1) if prev != "None" else "1"
+        new_count = str(int(prev) + 1) if prev is not None else "1"
         result = await client.call_tool("set_user_value", {"key": "visit_count", "value": new_count})
         print(f"[client] {_tool_text(result)}")
 
@@ -184,7 +184,7 @@ async def main():
         for _ in range(3):
             result = await client.call_tool("get_session_value", {"key": "session_counter"})
             prev = _tool_text(result)
-            new_count = str(int(prev) + 1) if prev != "None" else "1"
+            new_count = str(int(prev) + 1) if prev is not None else "1"
             result = await client.call_tool("set_session_value", {"key": "session_counter", "value": new_count})
             print(f"[client] {_tool_text(result)}")
 
