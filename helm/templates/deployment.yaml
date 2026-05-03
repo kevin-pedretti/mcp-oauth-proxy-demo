@@ -6,6 +6,12 @@ metadata:
     {{- include "mcp-oauth2-demo.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  {{- if .Values.persistence.enabled }}
+  # RWO PVC can only attach to one pod at a time; Recreate guarantees the
+  # old pod is gone before the new one tries to mount.
+  strategy:
+    type: Recreate
+  {{- end }}
   selector:
     matchLabels:
       {{- include "mcp-oauth2-demo.selectorLabels" . | nindent 6 }}
@@ -36,6 +42,10 @@ spec:
           env:
             - name: HOST
               value: "0.0.0.0"
+            {{- if .Values.persistence.enabled }}
+            - name: STATE_DB_PATH
+              value: {{ printf "%s/server_state.db" .Values.persistence.mountPath | quote }}
+            {{- end }}
             - name: OIDC_CONFIG_URL
               value: {{ .Values.auth.oidcConfigUrl | quote }}
             - name: OIDC_CLIENT_ID
@@ -69,3 +79,14 @@ spec:
             periodSeconds: 10
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          {{- if .Values.persistence.enabled }}
+          volumeMounts:
+            - name: state
+              mountPath: {{ .Values.persistence.mountPath | quote }}
+          {{- end }}
+      {{- if .Values.persistence.enabled }}
+      volumes:
+        - name: state
+          persistentVolumeClaim:
+            claimName: {{ include "mcp-oauth2-demo.pvcName" . }}
+      {{- end }}

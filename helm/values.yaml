@@ -1,3 +1,6 @@
+# Per-user state lives in a SQLite DB on a RWO PVC (see persistence below),
+# so replicaCount must remain 1 — multiple pods cannot share the volume and
+# would each see a divergent view of state.
 replicaCount: 1
 
 image:
@@ -46,6 +49,24 @@ route:
   tls:
     termination: edge
     insecureEdgeTerminationPolicy: Redirect
+
+# Per-user state (SQLite). Required for state to survive pod restarts.
+# Disable for an ephemeral demo (state is lost on restart). Because the DB
+# lives on a RWO PVC, replicaCount must stay 1 and the Deployment uses the
+# Recreate strategy so the old pod releases the volume before the new one
+# starts.
+persistence:
+  enabled: true
+  # Reference an existing PVC instead of letting the chart create one.
+  existingClaim: ""
+  size: 1Gi
+  # StorageClass for the chart-managed PVC. Empty uses the cluster default.
+  storageClassName: ""
+  accessModes:
+    - ReadWriteOnce
+  # Mount path inside the container. STATE_DB_PATH is set to
+  # <mountPath>/server_state.db automatically.
+  mountPath: /var/lib/mcp-oauth2-demo
 
 resources:
   requests:

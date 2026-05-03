@@ -29,3 +29,12 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- include "mcp-oauth2-demo.fullname" . }}
 {{- end }}
 {{- end }}
+
+{{/* Name of the PVC backing per-user state */}}
+{{- define "mcp-oauth2-demo.pvcName" -}}
+{{- if .Values.persistence.existingClaim }}
+{{- .Values.persistence.existingClaim }}
+{{- else }}
+{{- include "mcp-oauth2-demo.fullname" . }}
+{{- end }}
+{{- end }}
