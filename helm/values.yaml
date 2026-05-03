@@ -25,9 +25,9 @@ auth:
   oidcClientSecret: ""
 
   # Reference an existing Secret instead of creating one from oidcClientSecret above.
-  # The named secret must contain the key specified by existingSecretKey.
+  # The named secret must contain the key specified by secretKey.
   existingSecret: ""
-  existingSecretKey: "oidc-client-secret"
+  secretKey: "oidc-client-secret"
 
   # API audience identifier — required by some providers (e.g. Auth0); omit for others.
   oidcAudience: ""

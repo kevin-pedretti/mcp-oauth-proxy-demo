@@ -62,7 +62,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: {{ include "mcp-oauth2-demo.secretName" . }}
-                  key: {{ .Values.auth.existingSecretKey }}
+                  key: {{ .Values.auth.secretKey }}
             {{- if .Values.auth.oidcAudience }}
             - name: OIDC_AUDIENCE
               value: {{ .Values.auth.oidcAudience | quote }}
