@@ -74,13 +74,23 @@ spec:
             - name: BASE_URL
               value: {{ .Values.auth.baseUrl | quote }}
             {{- end }}
+          # Liveness stays tcpSocket — cheap hang-detection that doesn't
+          # depend on auth being wired up. We only want to restart the pod
+          # if the process is genuinely stuck.
           livenessProbe:
             tcpSocket:
               port: http
             initialDelaySeconds: 5
             periodSeconds: 15
+          # Readiness hits the OAuth authorization-server discovery endpoint.
+          # This route is registered by FastMCP's auth provider (OIDCProxy or
+          # InMemoryOAuthProvider in --dev) and is publicly readable, so a
+          # 200 confirms the server is bound *and* the OAuth proxy has
+          # initialized. Plain tcpSocket would mark the pod ready as soon as
+          # the listener bound, even if token validation wasn't yet wired up.
           readinessProbe:
-            tcpSocket:
+            httpGet:
+              path: /.well-known/oauth-authorization-server
               port: http
             initialDelaySeconds: 3
             periodSeconds: 10
