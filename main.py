@@ -25,9 +25,12 @@ import os
 import sqlite3
 from pathlib import Path
 
+from dotenv import load_dotenv
 from fastmcp import Context, FastMCP
 from fastmcp.exceptions import AuthorizationError
 from fastmcp.server.dependencies import get_access_token
+
+load_dotenv()
 
 
 # ---------------------------------------------------------------------------
