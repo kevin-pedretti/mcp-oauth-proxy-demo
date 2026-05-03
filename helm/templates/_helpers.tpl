@@ -38,3 +38,14 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- include "mcp-oauth2-demo.fullname" . }}
 {{- end }}
 {{- end }}
+
+{{/*
+Validate mutually-exclusive value combinations. Call this from a template
+that always renders (e.g. deployment.yaml) so misconfigurations fail at
+`helm install`/`upgrade` time rather than producing a silently-broken release.
+*/}}
+{{- define "mcp-oauth2-demo.validate" -}}
+{{- if and .Values.auth.existingSecret .Values.auth.oidcClientSecret -}}
+{{- fail "auth.existingSecret and auth.oidcClientSecret are mutually exclusive: when existingSecret is set, the chart will not render its own Secret and oidcClientSecret is silently ignored. Set only one." -}}
+{{- end -}}
+{{- end -}}

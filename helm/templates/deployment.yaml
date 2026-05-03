@@ -1,3 +1,4 @@
+{{- include "mcp-oauth2-demo.validate" . -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
