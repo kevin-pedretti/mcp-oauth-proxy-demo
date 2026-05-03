@@ -42,10 +42,17 @@ spec:
           env:
             - name: HOST
               value: "0.0.0.0"
-            {{- if .Values.persistence.enabled }}
+            # STATE_DB_PATH must always be set, even when persistence is off:
+            # main.py defaults the DB path to <module-dir>/server_state.db,
+            # but /app is owned by root in the UBI9 image and the pod runs
+            # as a non-root UID, so the default would EACCES on first write.
+            # /tmp is writable by any UID; the DB is ephemeral in this branch.
             - name: STATE_DB_PATH
+              {{- if .Values.persistence.enabled }}
               value: {{ printf "%s/server_state.db" .Values.persistence.mountPath | quote }}
-            {{- end }}
+              {{- else }}
+              value: "/tmp/server_state.db"
+              {{- end }}
             - name: OIDC_CONFIG_URL
               value: {{ .Values.auth.oidcConfigUrl | quote }}
             - name: OIDC_CLIENT_ID
