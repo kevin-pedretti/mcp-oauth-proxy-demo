@@ -127,7 +127,10 @@ def get_user_sub() -> str:
         return sub
     if _dev_mode:
         return "dev-user"
-    raise ValueError(
+    # Same reasoning as require_scope: AuthorizationError surfaces a
+    # structured error to the client. ValueError would leak as a generic
+    # 500 with no actionable message.
+    raise AuthorizationError(
         "Token has no 'sub' claim — cannot key per-user state. "
         "Ensure your OIDC provider issues JWT tokens with a subject claim."
     )
