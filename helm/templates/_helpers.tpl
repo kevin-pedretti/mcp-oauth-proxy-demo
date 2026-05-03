@@ -48,4 +48,13 @@ that always renders (e.g. deployment.yaml) so misconfigurations fail at
 {{- if and .Values.auth.existingSecret .Values.auth.oidcClientSecret -}}
 {{- fail "auth.existingSecret and auth.oidcClientSecret are mutually exclusive: when existingSecret is set, the chart will not render its own Secret and oidcClientSecret is silently ignored. Set only one." -}}
 {{- end -}}
+{{- if not .Values.auth.oidcConfigUrl -}}
+{{- fail "auth.oidcConfigUrl is required: set it to your OIDC provider's openid-configuration URL (e.g. https://YOUR_TENANT.auth0.com/.well-known/openid-configuration)" -}}
+{{- end -}}
+{{- if not .Values.auth.oidcClientId -}}
+{{- fail "auth.oidcClientId is required: set it to your OAuth application's client ID" -}}
+{{- end -}}
+{{- if and (not .Values.auth.oidcClientSecret) (not .Values.auth.existingSecret) -}}
+{{- fail "auth.oidcClientSecret (or auth.existingSecret) is required: set the client secret literally, or point to a pre-existing Kubernetes Secret via auth.existingSecret" -}}
+{{- end -}}
 {{- end -}}
