@@ -62,6 +62,13 @@ persistence:
   # the helm.sh/resource-policy: keep annotation, which causes Helm to leave
   # the PVC (and its data) in place on uninstall. You are then responsible
   # for deleting it manually when no longer needed.
+  #
+  # Toggle-back caveat: flipping keepOnDelete from true to false and running
+  # `helm upgrade` may not remove the annotation from the live PVC on every
+  # Helm version (the annotation is consulted by Helm's uninstall path, not
+  # reconciled like a regular field). If you need deletion-on-uninstall to
+  # resume, verify with `kubectl get pvc <name> -o yaml` after the upgrade
+  # and `kubectl annotate pvc <name> helm.sh/resource-policy-` if it lingers.
   keepOnDelete: false
   # Reference an existing PVC instead of letting the chart create one.
   existingClaim: ""
