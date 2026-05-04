@@ -21,6 +21,10 @@ spec:
       labels:
         {{- include "mcp-oauth2-demo.selectorLabels" . | nindent 8 }}
     spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       # OpenShift assigns a random UID at runtime; runAsNonRoot ensures it is
       # never root regardless of which UID is chosen.
       securityContext:

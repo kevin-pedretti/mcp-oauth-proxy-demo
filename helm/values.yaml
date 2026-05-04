@@ -8,6 +8,14 @@ image:
   pullPolicy: IfNotPresent
   tag: "latest"
 
+# References to existing Kubernetes Secrets of type kubernetes.io/dockerconfigjson
+# used to pull `image.repository` from a private registry. Leave empty when the
+# image is public. Create the secret separately, e.g.:
+#   kubectl create secret docker-registry my-registry-creds \
+#     --docker-server=registry.example.com --docker-username=... --docker-password=...
+imagePullSecrets: []
+  # - name: my-registry-creds
+
 service:
   type: ClusterIP
   port: 8000
