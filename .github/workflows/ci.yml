@@ -5,16 +5,28 @@ on:
     branches: [main]
   pull_request:
 
+# Cancel in-progress runs for the same ref when a new commit lands. Saves
+# CI minutes and avoids merging based on a green check from a stale commit.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
+      # SHA-pinned for supply-chain integrity. Tag: v3 (resolved 2026-05-03).
+      # When bumping, look up the new SHA with:
+      #   git ls-remote https://github.com/astral-sh/setup-uv refs/tags/<tag>
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@8d55fbecc275b1c35dbe060458839f8d30439ccf  # v3
         with:
           enable-cache: true
+          # Match the local interpreter pinned in .python-version so CI
+          # cannot silently drift to a newer minor.
+          python-version-file: .python-version
 
       - name: Install dependencies
         run: uv sync --frozen
@@ -22,8 +34,11 @@ jobs:
       - name: Ruff
         run: uv run ruff check .
 
+      # Pass `.` rather than an explicit file list so newly added .py files
+      # at the repo root are type-checked automatically. mypy excludes the
+      # .venv on its own.
       - name: Mypy
-        run: uv run mypy main.py client.py decode_token.py get_gitlab_token.py test_integration.py
+        run: uv run mypy .
 
       - name: Pytest
         run: uv run pytest -v
