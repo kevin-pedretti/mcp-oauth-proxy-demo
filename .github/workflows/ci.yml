@@ -14,12 +14,13 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
+    # All third-party actions are SHA-pinned for supply-chain integrity.
+    # The trailing comment on each `uses:` records the tag the SHA resolves
+    # to; when bumping, look up the new SHA with:
+    #   git ls-remote https://github.com/<owner>/<repo> refs/tags/<tag>
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
 
-      # SHA-pinned for supply-chain integrity. Tag: v3 (resolved 2026-05-03).
-      # When bumping, look up the new SHA with:
-      #   git ls-remote https://github.com/astral-sh/setup-uv refs/tags/<tag>
       - name: Install uv
         uses: astral-sh/setup-uv@8d55fbecc275b1c35dbe060458839f8d30439ccf  # v3
         with:
