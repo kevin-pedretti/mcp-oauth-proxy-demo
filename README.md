@@ -8,13 +8,13 @@ Instead of validating tokens itself, the server acts as an OAuth proxy to an ups
 
 ```
 MCP Client  ──► MCP Server (OIDC Proxy)  ──► Upstream OIDC Provider
-                     │                              │
-                     │  1. redirect to provider     │
-                     │ ◄────────────────────────────┤
-                     │  2. exchange code for token  │
+                     │                               │
+                     │  1. redirect to provider      │
+                     │ ◄─────────────────────────────┤
+                     │  2. exchange code for token   │
                      │ ──────────────────────────── ►│
                      │  3. issue FastMCP session JWT │
-                     │ ◄────────────────────────────┘
+                     │ ◄─────────────────────────────┘
 MCP Client  ◄── authenticated session
 ```
 
