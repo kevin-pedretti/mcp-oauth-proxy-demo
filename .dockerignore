@@ -4,7 +4,8 @@
 *.pyc
 __pycache__
 **/__pycache__
-*.db*
+cache.db*
+server_state.db
 helm/
 README*.md
 client.py
