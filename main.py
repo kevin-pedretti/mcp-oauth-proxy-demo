@@ -157,6 +157,7 @@ def whoami() -> dict:
     """Return claims from the authenticated bearer token. Requires the 'profile' scope."""
     require_scope("profile")
     token = get_access_token()
+    assert token is not None  # require_scope() raises if absent
     return {
         "client_id": token.client_id,
         "scopes": token.scopes,

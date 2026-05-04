@@ -26,7 +26,7 @@ async def dev_server(tmp_path, monkeypatch):
         yield url
 
 
-async def test_hello_whoami_set_get_user_value(dev_server):
+async def test_hello_whoami_set_get_state(dev_server):
     auth = HeadlessOAuth(dev_server, token_storage=MemoryStore())
     async with Client(dev_server, auth=auth) as client:
         result = await client.call_tool("hello", {"name": "World"})
@@ -40,3 +40,7 @@ async def test_hello_whoami_set_get_user_value(dev_server):
         await client.call_tool("set_user_value", {"key": "visit_count", "value": "42"})
         result = await client.call_tool("get_user_value", {"key": "visit_count"})
         assert result.content[0].text == "42"
+
+        await client.call_tool("set_session_value", {"key": "session_counter", "value": "7"})
+        result = await client.call_tool("get_session_value", {"key": "session_counter"})
+        assert result.content[0].text == "7"

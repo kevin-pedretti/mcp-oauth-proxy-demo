@@ -149,7 +149,7 @@ async def main():
 
     if token:
         auth = BearerAuth(token)
-        print(f"[client] Using bearer token from $TOKEN (skipping browser OAuth flow)")
+        print("[client] Using bearer token from $TOKEN (skipping browser OAuth flow)")
     else:
         auth = OAuth(token_storage=_build_token_storage())
 
