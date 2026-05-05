@@ -12,6 +12,11 @@ RUN pip install --no-cache-dir uv
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev
 
+# Apply local patch for FastMCP 3.2.4 id_token transparent refresh bug.
+# Remove once upstream ships a fix and the version pin is bumped.
+COPY fastmcp-3.2.4.patch ./
+RUN patch -p1 -d .venv/lib/python3.12/site-packages < fastmcp-3.2.4.patch
+
 # Copy only the server — dev tools (client, decode_token, get_gitlab_token) are not needed at runtime
 COPY main.py ./
 
