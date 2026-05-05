@@ -232,10 +232,10 @@ def build_auth(dev: bool, base_url: str):
         from mcp.server.auth.settings import ClientRegistrationOptions
         return InMemoryOAuthProvider(
             base_url=base_url,
-            required_scopes=["openid", "profile"],
+            required_scopes=["openid", "profile", "email"],
             client_registration_options=ClientRegistrationOptions(
                 enabled=True,
-                valid_scopes=["openid", "profile"],
+                valid_scopes=["openid", "profile", "email"],
             ),
         )
 
@@ -254,7 +254,7 @@ def build_auth(dev: bool, base_url: str):
         audience=os.environ.get("OIDC_AUDIENCE"),
         base_url=base_url,
         verify_id_token=verify_id_token,
-        required_scopes=["openid", "profile"],
+        required_scopes=["openid", "profile", "email"],
     )
 
 
