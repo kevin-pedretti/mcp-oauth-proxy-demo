@@ -18,6 +18,7 @@ restarts. Generate a key with:
     python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 """
 
+import argparse
 import asyncio
 import json
 import logging
@@ -143,7 +144,7 @@ class _OAuthRetryFilter(logging.Filter):
 logging.getLogger("mcp.client.auth.oauth2").addFilter(_OAuthRetryFilter())
 
 
-async def main():
+async def main(debug_claims: bool = False):
     server_url = os.environ.get("SERVER_URL", "http://localhost:8000/mcp")
     token = os.environ.get("TOKEN")
 
@@ -164,7 +165,10 @@ async def main():
 
         result = await client.call_tool("whoami", {})
         whoami = json.loads(result.content[0].text)
-        print(f"[client] whoami -> {json.dumps(whoami, indent=2)}")
+        display = {k: v for k, v in whoami.items() if not k.startswith("_debug")}
+        print(f"[client] whoami -> {json.dumps(display, indent=2)}")
+        if debug_claims:
+            print(f"[client] full claims -> {json.dumps(whoami.get('_debug_claims'), indent=2)}")
         identity = whoami.get("username") or whoami.get("name") or whoami.get("subject")
         print(f"[client] authenticated as: {identity}")
         print(f"[client] token {_format_expiry(whoami.get('expires_at'))}")
@@ -197,4 +201,11 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    parser = argparse.ArgumentParser(description="Demo MCP client")
+    parser.add_argument(
+        "--debug-claims",
+        action="store_true",
+        help="Print the full decoded token claims returned by whoami",
+    )
+    args = parser.parse_args()
+    asyncio.run(main(debug_claims=args.debug_claims))
