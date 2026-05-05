@@ -1,0 +1,89 @@
+--- a/fastmcp/server/auth/oauth_proxy/proxy.py
++++ b/fastmcp/server/auth/oauth_proxy/proxy.py
+@@ -1475,6 +1475,17 @@
+         """
+         return False
+ 
++    def _is_verification_token_expired(
++        self, upstream_token_set: UpstreamTokenSet
++    ) -> bool:
++        """Return True if the verification token has expired.
++
++        Subclasses that verify an alternate token (e.g. the OIDC id_token)
++        should override this to inspect that token's own expiry rather than
++        the access token expiry stored in upstream_token_set.expires_at.
++        """
++        return upstream_token_set.expires_at <= time.time()
++
+     async def _try_transparent_refresh(
+         self,
+         upstream_token_set: UpstreamTokenSet,
+@@ -1613,7 +1624,7 @@
+             if (
+                 not validated
+                 and upstream_token_set.refresh_token
+-                and upstream_token_set.expires_at <= time.time()
++                and self._is_verification_token_expired(upstream_token_set)
+             ):
+                 try:
+                     token_id = upstream_token_set.upstream_token_id
+@@ -1646,7 +1657,7 @@
+                         # helped by refreshing.
+                         if (
+                             not validated
+-                            and upstream_token_set.expires_at <= time.time()
++                            and self._is_verification_token_expired(upstream_token_set)
+                         ):
+                             upstream_token_set = await self._try_transparent_refresh(
+                                 upstream_token_set
+--- a/fastmcp/server/auth/oidc_proxy.py
++++ b/fastmcp/server/auth/oidc_proxy.py
+@@ -9,6 +9,7 @@
+     OAuth 2.0 Authorization Server Metadata - https://datatracker.ietf.org/doc/html/rfc8414
+ """
+ 
++import time
+ from collections.abc import Sequence
+ from typing import Literal
+ 
+@@ -452,7 +453,40 @@
+         JWT for both ``access_token`` and ``id_token``.
+         """
+         return self._verify_id_token
++
++    def _is_verification_token_expired(
++        self, upstream_token_set: UpstreamTokenSet
++    ) -> bool:
++        """Check expiry against the id_token when verify_id_token is enabled.
++
++        GitLab (and some other providers) issue id_tokens with a very short
++        lifetime (e.g. 2 minutes) that is independent of the access token
++        expiry.  The base class checks upstream_token_set.expires_at, which
++        reflects the access token lifetime — so it would never trigger a
++        transparent refresh until the access token itself expires, leaving
++        every request after the id_token TTL returning 401.
++
++        When verify_id_token is True we decode the id_token's exp claim
++        (without re-verifying the signature) and use that for the check.
++        """
++        if self._verify_id_token:
++            id_token = upstream_token_set.raw_token_data.get("id_token")
++            if id_token:
++                try:
++                    import base64
++                    import json
+ 
++                    parts = id_token.split(".")
++                    if len(parts) >= 2:
++                        padded = parts[1] + "=" * (4 - len(parts[1]) % 4)
++                        payload = json.loads(base64.urlsafe_b64decode(padded))
++                        return float(payload.get("exp", 0)) <= time.time()
++                except Exception:
++                    pass
++            # No id_token available; attempt refresh to be safe.
++            return True
++        return upstream_token_set.expires_at <= time.time()
++
+     def get_oidc_configuration(
+         self,
+         config_url: AnyHttpUrl,

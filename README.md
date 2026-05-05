@@ -317,3 +317,13 @@ uv run pytest test_integration.py -v
 ├── helm/               # Helm chart for OpenShift deployment
 └── .env.example        # Environment variable reference
 ```
+
+## FastMCP patch
+
+`fastmcp-3.2.4.patch` fixes a bug in FastMCP 3.2.4 where `OIDC_VERIFY_ID_TOKEN=true` stops working after the id_token expires (typically 2 minutes for GitLab), even though the access token and refresh token are still valid. The transparent token refresh never fires because it checks the access token expiry instead of the id_token expiry. A PR has been filed upstream against [PrefectHQ/fastmcp](https://github.com/PrefectHQ/fastmcp).
+
+After `uv sync`, re-apply the patch with:
+
+```bash
+patch -p1 -d .venv/lib/python3.12/site-packages < fastmcp-3.2.4.patch
+```
