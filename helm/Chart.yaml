@@ -1,5 +1,5 @@
 apiVersion: v2
-name: mcp-oauth2-demo
+name: mcp-oauth-proxy-demo
 description: Hello World MCP server with OAuth2/OIDC authentication
 type: application
 version: 0.1.0
