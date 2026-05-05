@@ -2,7 +2,7 @@
 
 A "hello world" [MCP](https://modelcontextprotocol.io) server built with [FastMCP](https://gofastmcp.com) that demonstrates the **OIDC proxy** authentication pattern.
 
-Instead of validating tokens itself, the server acts as an OAuth proxy to an upstream OIDC provider (Auth0, Keycloak, Google, GitLab, etc.). MCP clients go through a standard browser-based OAuth flow — no manual token management required.
+Instead of validating tokens itself, the server acts as an OAuth proxy to an upstream OIDC provider (Auth0, Keycloak, Google, GitLab, etc.). MCP clients go through a standard OAuth flow — no manual token management required. Both a browser-based flow (default) and a headless OOB flow for SSH environments are supported.
 
 ## How it works
 
@@ -48,7 +48,15 @@ On first run the client opens your browser, completes a local OAuth flow (no log
 
 Tokens are kept in memory for the life of the process by default and discarded on exit, so each fresh `uv run client.py` re-does the browser flow. To persist tokens across runs, set `OAUTH_STORAGE_ENCRYPTION_KEY` in your `.env` — the client then writes Fernet-encrypted tokens to `~/.fastmcp/oauth-tokens/` and subsequent runs skip the browser flow until the cached token expires (see [Environment variables](#environment-variables)).
 
-For headless / CI use or to skip the browser flow entirely, pass a pre-issued bearer token via the `TOKEN` env var: `TOKEN=<jwt> uv run client.py`. See also [`get_gitlab_token.py`](#option-b--get_gitlab_tokenpy-public-client--pkce) for obtaining a GitLab id_token to use this way.
+**SSH / headless environments:** if you're running the client on a remote host without a browser, use `--oob`:
+
+```bash
+uv run client.py --oob
+```
+
+The client prints an authorization URL. Open it in a browser on any machine, grant access, then copy the full redirect URL from your browser's address bar (the page will fail to load — that's expected) and paste it back into the terminal. The client parses the authorization code from the URL and completes the flow.
+
+For CI use or to skip OAuth entirely, pass a pre-issued bearer token via the `TOKEN` env var: `TOKEN=<jwt> uv run client.py`. See also [`get_gitlab_token.py`](#option-b--get_gitlab_tokenpy-public-client--pkce) for obtaining a GitLab id_token to use this way.
 
 First run:
 
@@ -255,6 +263,12 @@ Use per-user state when data should follow the user across reconnects (e.g. pref
 | `--host HOST` | Bind address (default: `127.0.0.1`; use `0.0.0.0` in containers). |
 | `--port PORT` | Port to listen on (default: `8000`). |
 
+## Client flags
+
+| Flag | Description |
+|------|-------------|
+| `--oob` | Use the out-of-band (OOB) OAuth flow. Prints the authorization URL instead of opening a browser, then prompts you to paste the redirect URL back. Useful when running the client over SSH or in any environment without a local browser. |
+
 ## Environment variables
 
 | Variable | Default | Description |
@@ -318,7 +332,7 @@ uv run pytest test_integration.py -v
 ```
 .
 ├── main.py             # FastMCP server with OIDCProxy auth, per-user (SQLite) and per-session state (--dev flag for local testing)
-├── client.py           # Demo client using browser-based OAuth flow
+├── client.py           # Demo client: browser OAuth flow (default) or OOB/headless flow (--oob)
 ├── get_gitlab_token.py # Utility: obtain a GitLab OIDC ID token directly via public client + PKCE (no secret required)
 ├── decode_token.py     # Utility: decode a JWT and print its header and claims
 ├── pyproject.toml      # Project dependencies (uv)

@@ -2,12 +2,17 @@
 
 Usage:
     uv run client.py                                  # browser OAuth flow
+    uv run client.py --oob                            # OOB flow (headless / SSH)
     TOKEN=<bearer-token> uv run client.py             # pre-issued bearer token
     TOKEN=$(uv run get_gitlab_token.py) uv run client.py
 
 When TOKEN is set, the client skips the browser flow and sends the value
 as a bearer token. Useful for headless / CI scenarios, or when paired with
 `get_gitlab_token.py` to use a GitLab id_token directly.
+
+--oob enables the out-of-band flow for SSH or text-only environments: the
+client prints an authorization URL that the user opens in any browser, then
+prompts them to paste the resulting redirect URL back into the terminal.
 
 Otherwise the client opens your browser for OAuth authorization on first
 run and reuses cached tokens (persisted to disk, encrypted) on subsequent
@@ -18,6 +23,7 @@ restarts. Generate a key with:
     python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 """
 
+import argparse
 import asyncio
 import json
 import logging
@@ -25,6 +31,7 @@ import os
 import stat
 import sys
 import time
+from urllib.parse import parse_qs, urlparse
 
 from cryptography.fernet import Fernet
 from key_value.aio.stores.disk import DiskStore
@@ -33,6 +40,7 @@ from key_value.aio.wrappers.encryption import FernetEncryptionWrapper
 
 from fastmcp import Client
 from fastmcp.client.auth import BearerAuth, OAuth
+from fastmcp.client.auth.oauth import ClientNotFoundError
 
 
 def _secure_storage_permissions(directory: str) -> None:
@@ -143,13 +151,64 @@ class _OAuthRetryFilter(logging.Filter):
 logging.getLogger("mcp.client.auth.oauth2").addFilter(_OAuthRetryFilter())
 
 
-async def main():
+class OAuthOOB(OAuth):
+    """OAuth variant for headless / SSH environments.
+
+    Instead of opening a browser and running a local callback server, this
+    prints the authorization URL and prompts the user to paste the resulting
+    redirect URL back into the terminal.
+    """
+
+    async def redirect_handler(self, authorization_url: str) -> None:
+        # Keep the parent's pre-flight check so stale client IDs are detected
+        # before we bother the user with a URL.
+        async with self.httpx_client_factory() as client:
+            response = await client.get(authorization_url, follow_redirects=False)
+            if response.status_code == 400:
+                raise ClientNotFoundError(
+                    "OAuth client not found — cached credentials may be stale"
+                )
+            if response.status_code not in (200, 302, 303, 307, 308):
+                raise RuntimeError(
+                    f"Unexpected authorization response: {response.status_code}"
+                )
+
+        print("\n[auth] Open this URL in your browser to authorize:\n", file=sys.stderr)
+        print(f"  {authorization_url}\n", file=sys.stderr)
+        print(
+            "[auth] After granting access your browser will be redirected to a URL\n"
+            "       starting with http://localhost:… — the page will fail to load,\n"
+            "       but the full URL will be visible in your browser's address bar.",
+            file=sys.stderr,
+        )
+
+    async def callback_handler(self) -> tuple[str, str | None]:
+        print("\n[auth] Paste the full redirect URL from your browser's address bar: ", end="", flush=True, file=sys.stderr)
+        loop = asyncio.get_event_loop()
+        raw = await loop.run_in_executor(None, sys.stdin.readline)
+
+        parsed = urlparse(raw.strip())
+        params = parse_qs(parsed.query)
+        code_list = params.get("code")
+        state_list = params.get("state")
+        if not code_list:
+            raise ValueError(
+                "No 'code' parameter found in the pasted URL. "
+                "Make sure you copied the full redirect URL (including ?code=…)."
+            )
+        return code_list[0], state_list[0] if state_list else None
+
+
+async def main(oob: bool = False):
     server_url = os.environ.get("SERVER_URL", "http://localhost:8000/mcp")
     token = os.environ.get("TOKEN")
 
     if token:
         auth = BearerAuth(token)
         print("[client] Using bearer token from $TOKEN (skipping browser OAuth flow)")
+    elif oob:
+        auth = OAuthOOB(token_storage=_build_token_storage())
+        print("[client] Using OOB OAuth flow (headless mode — no browser required on this host)", file=sys.stderr)
     else:
         auth = OAuth(token_storage=_build_token_storage())
 
@@ -197,4 +256,11 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    parser = argparse.ArgumentParser(description="Demo MCP client")
+    parser.add_argument(
+        "--oob",
+        action="store_true",
+        help="Use out-of-band OAuth flow (print URL, paste redirect URL back) for headless/SSH use",
+    )
+    args = parser.parse_args()
+    asyncio.run(main(oob=args.oob))
