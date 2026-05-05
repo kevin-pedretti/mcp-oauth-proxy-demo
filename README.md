@@ -217,7 +217,7 @@ The script uses the Authorization Code flow with PKCE (S256). No `GITLAB_CLIENT_
 | Tool | Required scope | Description |
 |------|---------------|-------------|
 | `hello(name)` | `openid` | Returns a greeting including the authenticated subject |
-| `whoami()` | `profile` | Returns identity info from the session token |
+| `whoami()` | `profile` | Returns identity info from the session token. With `--debug-claims`, also includes a `_debug_claims` field containing all raw decoded token claims. |
 | `set_user_value(key, value)` | `openid` | Store a key/value pair for the current user (see [Per-user state](#per-user-state)) |
 | `get_user_value(key)` | `openid` | Retrieve a stored value for the current user |
 | `set_session_value(key, value)` | `openid` | Store a key/value pair for the current session (see [Per-session state](#per-session-state)) |
@@ -245,6 +245,15 @@ The database path can be overridden with the `STATE_DB_PATH` environment variabl
 - **Connection-scoped** — two separate script runs, even as the same user, get independent session state.
 
 Use per-user state when data should follow the user across reconnects (e.g. preferences, history). Use per-session state for transient context that only makes sense within a single interaction (e.g. conversation state, request counters).
+
+## Server flags
+
+| Flag | Description |
+|------|-------------|
+| `--dev` | Use the in-memory OAuth provider. No external OIDC provider or `.env` needed. |
+| `--debug-claims` | Append a `_debug_claims` field to `whoami()` responses containing all raw decoded token claims. Useful for inspecting what your OIDC provider actually issues. Do not use in production. |
+| `--host HOST` | Bind address (default: `127.0.0.1`; use `0.0.0.0` in containers). |
+| `--port PORT` | Port to listen on (default: `8000`). |
 
 ## Environment variables
 
