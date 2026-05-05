@@ -236,6 +236,7 @@ def build_auth(dev: bool, base_url: str):
         audience=os.environ.get("OIDC_AUDIENCE"),
         base_url=base_url,
         verify_id_token=verify_id_token,
+        required_scopes=["openid", "profile"],
     )
 
 
