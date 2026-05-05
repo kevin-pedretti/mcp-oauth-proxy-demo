@@ -183,6 +183,8 @@ def whoami() -> dict:
         "name": token.claims.get("name"),
         "email": token.claims.get("email"),
         "issuer": token.claims.get("iss"),
+        # DEBUG: full claims — remove after diagnosing email=null issue
+        "_debug_claims": dict(token.claims) if token.claims else None,
     }
 
 
