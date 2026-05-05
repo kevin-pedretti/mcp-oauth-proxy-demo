@@ -99,6 +99,7 @@ def _db_get(sub: str, key: str) -> str | None:
 # ---------------------------------------------------------------------------
 
 _dev_mode: bool = False
+_debug_claims_mode: bool = False
 
 
 def require_scope(scope: str) -> None:
@@ -183,8 +184,7 @@ def whoami() -> dict:
         "name": token.claims.get("name"),
         "email": token.claims.get("email"),
         "issuer": token.claims.get("iss"),
-        # DEBUG: full claims — remove after diagnosing email=null issue
-        "_debug_claims": dict(token.claims) if token.claims else None,
+        **({"_debug_claims": dict(token.claims)} if _debug_claims_mode and token.claims else {}),
     }
 
 
@@ -265,10 +265,12 @@ def main():
     parser.add_argument("--host", default=os.environ.get("HOST", "127.0.0.1"), help="Bind address (default: 127.0.0.1)")
     parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8000")), help="Port (default: 8000)")
     parser.add_argument("--dev", action="store_true", help="Use in-memory OAuth provider (no external OIDC provider required)")
+    parser.add_argument("--debug-claims", action="store_true", help="Include full decoded token claims in whoami responses (for debugging)")
     args = parser.parse_args()
 
-    global _dev_mode
+    global _dev_mode, _debug_claims_mode
     _dev_mode = args.dev
+    _debug_claims_mode = args.debug_claims
 
     _init_db()
 
