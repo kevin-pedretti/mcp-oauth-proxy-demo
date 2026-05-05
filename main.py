@@ -138,6 +138,21 @@ def get_user_sub() -> str:
     )
 
 
+def get_user_display_name() -> str:
+    """Return a human-readable display name for the current user.
+
+    Prefers preferred_username > nickname > name > sub, falling back to
+    get_user_sub() so it always returns something.
+    """
+    token = get_access_token()
+    if token:
+        for claim in ("preferred_username", "nickname", "name"):
+            val = token.claims.get(claim)
+            if val:
+                return val
+    return get_user_sub()
+
+
 # ---------------------------------------------------------------------------
 # Server
 # ---------------------------------------------------------------------------
@@ -149,7 +164,7 @@ mcp = FastMCP(name="Hello World MCP")
 def hello(name: str = "World") -> str:
     """Say hello. Requires the 'openid' scope."""
     require_scope("openid")
-    return f"Hello, {name}! (authenticated as: {get_user_sub()})"
+    return f"Hello, {name}! (authenticated as: {get_user_display_name()})"
 
 
 @mcp.tool
@@ -164,6 +179,9 @@ def whoami() -> dict:
         "expires_at": token.expires_at,
         # JWT-only fields (None when using InMemoryOAuthProvider)
         "subject": token.claims.get("sub"),
+        "username": token.claims.get("preferred_username") or token.claims.get("nickname"),
+        "name": token.claims.get("name"),
+        "email": token.claims.get("email"),
         "issuer": token.claims.get("iss"),
     }
 

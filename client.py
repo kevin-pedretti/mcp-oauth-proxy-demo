@@ -165,6 +165,8 @@ async def main():
         result = await client.call_tool("whoami", {})
         whoami = json.loads(result.content[0].text)
         print(f"[client] whoami -> {json.dumps(whoami, indent=2)}")
+        identity = whoami.get("username") or whoami.get("name") or whoami.get("subject")
+        print(f"[client] authenticated as: {identity}")
         print(f"[client] token {_format_expiry(whoami.get('expires_at'))}")
 
         # --- Per-user state (SQLite-backed, survives server restarts) ----------------
