@@ -48,7 +48,8 @@ auth:
 
   # Public URL of this server, used to construct OAuth redirect URIs.
   # For an OpenShift Route with TLS, this should be https://<route-hostname>.
-  # Must match the callback URL registered with your OIDC provider.
+  # Do NOT include a /callback suffix — the server appends that automatically.
+  # Register <baseUrl>/callback as the redirect URI with your OIDC provider.
   baseUrl: ""
 
 # OpenShift Route for external access.
