@@ -164,9 +164,6 @@ class _OAuthRetryFilter(logging.Filter):
         return True
 
 
-logging.getLogger("mcp.client.auth.oauth2").addFilter(_OAuthRetryFilter())
-
-
 class OAuthOOB(OAuth):
     """OAuth variant for headless / SSH environments.
 
@@ -216,6 +213,7 @@ class OAuthOOB(OAuth):
 
 
 async def main(oob: bool = False):
+    logging.getLogger("mcp.client.auth.oauth2").addFilter(_OAuthRetryFilter())
     server_url = os.environ.get("SERVER_URL", "http://localhost:8000/mcp")
     token = os.environ.get("TOKEN")
 
