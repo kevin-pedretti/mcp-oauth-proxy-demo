@@ -186,7 +186,7 @@ class OAuthOOB(OAuth):
 
     async def callback_handler(self) -> tuple[str, str | None]:
         print("\n[auth] Paste the full redirect URL from your browser's address bar: ", end="", flush=True, file=sys.stderr)
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         raw = await loop.run_in_executor(None, sys.stdin.readline)
 
         parsed = urlparse(raw.strip())
