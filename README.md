@@ -146,6 +146,12 @@ uv run client.py
 
 The client opens your browser to the provider's login page. After authenticating, the OAuth flow completes automatically and the client calls the tools.
 
+If the server is running on a different host or port, set `SERVER_URL` (either in your `.env` or inline):
+
+```bash
+SERVER_URL=https://your-server.example.com/mcp uv run client.py
+```
+
 ---
 
 ### Provider-specific notes

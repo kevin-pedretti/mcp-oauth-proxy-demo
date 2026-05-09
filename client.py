@@ -34,6 +34,10 @@ import time
 from datetime import datetime
 from urllib.parse import parse_qs, urlparse
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from cryptography.fernet import Fernet
 from key_value.aio.stores.disk import DiskStore
 from key_value.aio.stores.memory import MemoryStore
