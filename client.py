@@ -111,6 +111,20 @@ def _format_duration(seconds: float) -> str:
     return " ".join(parts)
 
 
+def _increment(value: str | None) -> str:
+    """Parse value as an integer, increment it, and return the result as a string.
+
+    Resets to "1" when value is None (key not yet set) or cannot be parsed as
+    an integer (e.g. a previous run stored a non-numeric string in the same key).
+    """
+    if value is None:
+        return "1"
+    try:
+        return str(int(value) + 1)
+    except ValueError:
+        return "1"
+
+
 class _OAuthRetryFilter(logging.Filter):
     """Replace expected OAuth retry log noise with clean one-line status messages.
 
@@ -240,7 +254,7 @@ async def main(oob: bool = False):
         prev = _tool_text(result)
         print(f"[client] visit_count from last run -> {prev}")
 
-        new_count = str(int(prev) + 1) if prev is not None else "1"  # assumes visit_count is always an int string
+        new_count = _increment(prev)
         result = await client.call_tool("set_user_value", {"key": "visit_count", "value": new_count})
         print(f"[client] {_tool_text(result)}")
 
@@ -251,7 +265,7 @@ async def main(oob: bool = False):
         for _ in range(3):
             result = await client.call_tool("get_session_value", {"key": "session_counter"})
             prev = _tool_text(result)
-            new_count = str(int(prev) + 1) if prev is not None else "1"  # assumes session_counter is always an int string
+            new_count = _increment(prev)
             result = await client.call_tool("set_session_value", {"key": "session_counter", "value": new_count})
             print(f"[client] {_tool_text(result)}")
 
