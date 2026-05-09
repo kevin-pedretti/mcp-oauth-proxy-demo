@@ -15,6 +15,9 @@ Prerequisites:
     2. Set the following environment variables (or add them to .env):
          GITLAB_URL        - e.g. https://gitlab.example.com
          GITLAB_CLIENT_ID  - Application ID from step 1
+         BROWSER           - macOS only: application name passed to `open -a` (e.g. "Firefox",
+                             "Google Chrome"). Must be an app name, not a shell command.
+                             Omit to use the system default browser via webbrowser.open().
 
     3. Configure main.py to validate the id_token against GitLab's JWKS:
          OIDC_CONFIG_URL=https://<your-gitlab>/.well-known/openid-configuration
