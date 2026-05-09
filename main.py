@@ -25,6 +25,7 @@ import argparse
 import asyncio
 import os
 import sqlite3
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -276,6 +277,18 @@ def main():
     global _dev_mode, _debug_claims_mode
     _dev_mode = args.dev
     _debug_claims_mode = args.debug_claims
+
+    if args.debug_claims:
+        print(
+            "\n"
+            "  WARNING: --debug-claims is enabled.\n"
+            "  Every whoami call will return the full decoded token payload,\n"
+            "  including all IdP claims (roles, groups, phone, address, etc.).\n"
+            "  This data is passed to the MCP client (e.g. an AI model) and\n"
+            "  may be retained in conversation logs or inference infrastructure.\n"
+            "  Do not run with --debug-claims in production.\n",
+            file=sys.stderr,
+        )
 
     _init_db()
 
