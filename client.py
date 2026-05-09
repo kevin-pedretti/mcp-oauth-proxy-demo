@@ -31,6 +31,7 @@ import os
 import stat
 import sys
 import time
+from datetime import datetime
 from urllib.parse import parse_qs, urlparse
 
 from cryptography.fernet import Fernet
@@ -89,10 +90,10 @@ def _tool_text(result) -> str | None:
     return result.content[0].text if result.content else None
 
 
-def _format_expiry(expires_at: float | None) -> str:
+def _format_expiry(expires_at: str | None) -> str:
     if expires_at is None:
         return "no expiry"
-    delta = expires_at - time.time()
+    delta = datetime.fromisoformat(expires_at).timestamp() - time.time()
     if delta <= 0:
         return f"expired {_format_duration(-delta)} ago"
     return f"expires in {_format_duration(delta)}"

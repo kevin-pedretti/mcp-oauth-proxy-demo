@@ -25,6 +25,7 @@ import argparse
 import asyncio
 import os
 import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -178,7 +179,10 @@ def whoami() -> dict:
     return {
         "client_id": token.client_id,
         "scopes": token.scopes,
-        "expires_at": token.expires_at,
+        "expires_at": (
+            datetime.fromtimestamp(token.expires_at, tz=timezone.utc).isoformat()
+            if token.expires_at is not None else None
+        ),
         # JWT-only fields (None when using InMemoryOAuthProvider)
         "subject": token.claims.get("sub"),
         "username": token.claims.get("preferred_username") or token.claims.get("nickname"),
