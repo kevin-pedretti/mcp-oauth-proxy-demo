@@ -98,7 +98,13 @@ def main():
     # Bind to loopback only — the redirect URI is http://localhost:9999/callback
     # and binding to all interfaces would let any process on the host (or any
     # peer on a shared LAN) race to receive the authorization code.
-    httpd = http.server.HTTPServer(("127.0.0.1", 9999), _CallbackHandler)
+    try:
+        httpd = http.server.HTTPServer(("127.0.0.1", 9999), _CallbackHandler)
+    except OSError as e:
+        raise SystemExit(
+            f"error: could not bind callback server on port 9999: {e}\n"
+            "Make sure port 9999 is not already in use, then re-run get_gitlab_token.py."
+        ) from e
     # handle_request() will block forever waiting for a callback if the user
     # closes the browser. Set a server timeout so it returns cleanly instead.
     httpd.timeout = 120
