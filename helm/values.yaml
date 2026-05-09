@@ -5,7 +5,9 @@ replicaCount: 1
 
 image:
   repository: mcp-oauth2-demo
-  pullPolicy: Always
+  # IfNotPresent avoids unnecessary registry round-trips on every pod restart.
+  # Set to Always during active development when pushing :latest frequently.
+  pullPolicy: IfNotPresent
   tag: "latest"
 
 # References to existing Kubernetes Secrets of type kubernetes.io/dockerconfigjson
