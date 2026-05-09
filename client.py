@@ -38,6 +38,8 @@ from key_value.aio.stores.disk import DiskStore
 from key_value.aio.stores.memory import MemoryStore
 from key_value.aio.wrappers.encryption import FernetEncryptionWrapper
 
+from key_value.aio.protocols import AsyncKeyValue
+
 from fastmcp import Client
 from fastmcp.client.auth import BearerAuth, OAuth
 from fastmcp.client.auth.oauth import ClientNotFoundError
@@ -57,7 +59,7 @@ def _secure_storage_permissions(directory: str) -> None:
         os.chmod(db_path, stat.S_IRUSR | stat.S_IWUSR)
 
 
-def _build_token_storage() -> object:
+def _build_token_storage() -> AsyncKeyValue:
     """When OAUTH_STORAGE_ENCRYPTION_KEY is set, persist tokens to an encrypted
     on-disk store. When it isn't, fall back to in-memory storage — writing
     Fernet-encrypted blobs with an ephemeral key would leave unrecoverable
@@ -203,6 +205,7 @@ async def main(oob: bool = False):
     server_url = os.environ.get("SERVER_URL", "http://localhost:8000/mcp")
     token = os.environ.get("TOKEN")
 
+    auth: BearerAuth | OAuth
     if token:
         auth = BearerAuth(token)
         print("[client] Using bearer token from $TOKEN (skipping browser OAuth flow)")
