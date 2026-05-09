@@ -19,10 +19,10 @@ jobs:
     # to; when bumping, look up the new SHA with:
     #   git ls-remote https://github.com/<owner>/<repo> refs/tags/<tag>
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5
 
       - name: Install uv
-        uses: astral-sh/setup-uv@8d55fbecc275b1c35dbe060458839f8d30439ccf  # v3
+        uses: astral-sh/setup-uv@e58605a9b6da7c637471fab8847a5e5a6b8df081  # v5
         with:
           enable-cache: true
           # Match the local interpreter pinned in .python-version so CI
