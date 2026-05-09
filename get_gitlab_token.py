@@ -52,28 +52,26 @@ def _pkce_pair() -> tuple[str, str]:
     challenge = base64.urlsafe_b64encode(digest).rstrip(b"=").decode()
     return verifier, challenge
 
-_callback: dict[str, str] = {}
-
-
-class _CallbackHandler(http.server.BaseHTTPRequestHandler):
-    def do_GET(self):
-        qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
-        if "code" not in qs:
-            self.send_response(400)
-            self.end_headers()
-            self.wfile.write(b"Missing 'code' parameter.")
-            return
-        _callback["code"] = qs["code"][0]
-        _callback["state"] = qs.get("state", [""])[0]
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(b"Authentication successful - you can close this tab.")
-
-    def log_message(self, *_):
-        pass
-
-
 def main():
+    callback: dict[str, str] = {}
+
+    class _CallbackHandler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            if "code" not in qs:
+                self.send_response(400)
+                self.end_headers()
+                self.wfile.write(b"Missing 'code' parameter.")
+                return
+            callback["code"] = qs["code"][0]
+            callback["state"] = qs.get("state", [""])[0]
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"Authentication successful - you can close this tab.")
+
+        def log_message(self, *_):
+            pass
+
     code_verifier, code_challenge = _pkce_pair()
     # Random state binds the callback to this specific flow — defends against
     # CSRF on the redirect URI. PKCE protects the token exchange; state
@@ -113,20 +111,20 @@ def main():
     httpd.timeout = 120
     httpd.handle_request()
 
-    if not _callback:
+    if not callback:
         raise RuntimeError(
             f"No callback received within {httpd.timeout}s — did the GitLab login complete? "
             "Re-run get_gitlab_token.py to retry."
         )
 
-    returned_state = _callback.get("state", "")
+    returned_state = callback.get("state", "")
     if not secrets.compare_digest(state, returned_state):
         raise RuntimeError(
             "OAuth state mismatch — the callback did not originate from this flow. "
             "Aborting to prevent CSRF / code injection."
         )
 
-    code = _callback.get("code")
+    code = callback.get("code")
     if not code:
         raise RuntimeError("No authorization code received.")
 
